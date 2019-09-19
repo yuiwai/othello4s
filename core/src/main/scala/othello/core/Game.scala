@@ -11,7 +11,14 @@ final case class Game(
     (state, isTurnOf(actorId)) match {
       case (Playing, true) =>
         othello.put(pos, othello.turn)
-          .fold(e => Left(InvalidPos(e)), o => Right(copy(o, nextIsOwner = !nextIsOwner, version = version + 1)))
+          .fold(
+            e => Left(InvalidPos(e)),
+            o => Right(
+              copy(
+                o,
+                state = if (o.isGameOver) Terminated else Playing,
+                nextIsOwner = !nextIsOwner,
+                version = version + 1)))
       case (Playing, false) => Left(IsNotTurn)
       case _ => Left(NotPlaying)
     }
@@ -24,6 +31,8 @@ final case class Game(
       if (ownerId == newChallengerId) Left(SameAsOwnerId)
       else Right(copy(challengerId = Some(newChallengerId), state = Prepared))
     }(_ => Left(NotWaiting))
+  def winnerColor: Option[StoneColor] = None
+  def winner: Option[ParticipantId] = None
   def start: Game = copy(state = Playing)
   def giveUp: Game = copy(state = Terminated)
 }
