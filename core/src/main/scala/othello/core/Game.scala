@@ -13,12 +13,12 @@ final case class Game(
         othello.put(pos, othello.turn)
           .fold(
             e => Left(InvalidPos(e)),
-            o => Right(
-              copy(
-                o,
-                state = if (o.isGameOver) Terminated else Playing,
-                nextIsOwner = !nextIsOwner,
-                version = version + 1)))
+            o => Right(copy(o, version = version + 1, nextIsOwner = !nextIsOwner))
+              .map { g =>
+                g.copy(
+                  state = if (o.isGameOver) Terminated(g.greaterColor.flatMap(g.participantIdFromColor))
+                  else Playing)
+              })
       case (Playing, false) => Left(IsNotTurn)
       case _ => Left(NotPlaying)
     }
@@ -31,10 +31,18 @@ final case class Game(
       if (ownerId == newChallengerId) Left(SameAsOwnerId)
       else Right(copy(challengerId = Some(newChallengerId), state = Prepared))
     }(_ => Left(NotWaiting))
-  def winnerColor: Option[StoneColor] = None
-  def winner: Option[ParticipantId] = None
+  def participantIdFromColor(color: StoneColor): Option[ParticipantId] =
+    (othello.turn == color, nextIsOwner) match {
+      case (true, true) | (false, false) => Some(ownerId)
+      case _ => challengerId
+    }
+  def greaterColor: Option[StoneColor] = othello.greaterColor
+  def winner: Option[ParticipantId] = state match {
+    case Terminated(p) => p
+    case _ => None
+  }
   def start: Game = copy(state = Playing)
-  def giveUp: Game = copy(state = Terminated)
+  def giveUp: Game = copy(state = Terminated(if (nextIsOwner) challengerId else Some(ownerId)))
 }
 object Game {
   def apply(ownerId: ParticipantId): Game = apply(Othello(), Waiting, ownerId, None, nextIsOwner = true, 1)
@@ -46,7 +54,7 @@ case object Waiting extends GameState
 case object Prepared extends GameState
 case object Canceled extends GameState
 case object Playing extends GameState
-case object Terminated extends GameState
+case class Terminated(participantId: Option[ParticipantId]) extends GameState
 
 trait GameOps
 trait Player

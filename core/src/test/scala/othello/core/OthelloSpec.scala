@@ -62,6 +62,10 @@ object OthelloSpec extends TestSuite {
       core.Othello((for {x <- 1 to 8; y <- 1 to 8; t = Pos(x, y) -> White} yield t).toMap, Black).isGameOver ==> true
       Othello(Map(Pos(1, 1) -> White), Black).isGameOver ==> true
     }
+    test("greater color") {
+      Othello().greaterColor ==> None
+      Othello().put(4, 3, Black).right.get.greaterColor ==> Some(Black)
+    }
   }
   def fail(msg: String): Unit = "" ==> msg
 }

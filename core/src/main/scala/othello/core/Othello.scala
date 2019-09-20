@@ -5,6 +5,11 @@ final case class Othello(stones: Map[Pos, StoneColor], turn: StoneColor) {
   def get(x: Int, y: Int): Option[StoneColor] = get(Pos(x, y))
   def gets(xs: => Seq[Pos]): Seq[StoneColor] = xs.map(get).collect { case Some(x) => x }
   def gets(xs: (Int, Int)*): Seq[StoneColor] = gets(xs.map(Pos.tupled))
+  def greaterColor: Option[StoneColor] = score(Black) -> score(White) match {
+    case (b, w) if b > w => Some(Black)
+    case (b, w) if b < w => Some(White)
+    case _ => None
+  }
   def chain(origin: Pos, direction: Direction): Option[Chain] = {
     get(origin).flatMap { c =>
       @scala.annotation.tailrec
