@@ -2,6 +2,7 @@ package othello
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
+import othello.GameComponent.WatchingMode
 import othello.core.ParticipantId
 import othello.service.GameSummary
 
@@ -25,6 +26,7 @@ object EntranceComponent {
                 )
               } else {
                 <.button(
+                  ^.onClick --> p.handler(LoadGame(g.gameId, p.participantId, WatchingMode)),
                   "Watch"
                 )
               }
