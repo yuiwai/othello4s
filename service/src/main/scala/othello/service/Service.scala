@@ -11,6 +11,7 @@ trait Service[F[_]] {
   def createGame(participantId: ParticipantId): F[Either[ServiceError, GameSummary]]
   def entry(gameId: GameId, participantId: ParticipantId): F[Either[ServiceError, EntryId]]
   def putStone(gameId: GameId, participantId: ParticipantId, pos: Pos): F[Either[ServiceError, Game]]
+  def giveUp(gameId: GameId, participantId: ParticipantId): F[Either[ServiceError, Game]]
 }
 
 final case class GameId(value: Int) extends AnyVal
@@ -20,6 +21,7 @@ trait GameRepository[F[_]] {
   def create(ownerId: ParticipantId): F[GameId]
   def ownedBy(ownerId: ParticipantId): F[Option[Game]]
   def store(gameId: GameId, game: Game): F[Option[Game]] // FIXME 戻り値要検討
+  def delete(gameId: GameId): F[Option[GameId]]
 }
 
 final case class GameSummary(
@@ -66,6 +68,9 @@ trait Entry {
 
 final case class EntryRequest(gameId: GameId, participantId: ParticipantId)
 final case class PutStoneRequest(gameId: GameId, participantId: ParticipantId, pos: Pos)
+final case class GiveUpRequest(gameId: GameId, participantId: ParticipantId)
 
 sealed trait GameEvent
 final case class StonePut(participantId: ParticipantId, pos: Pos, version: Int) extends GameEvent
+final case class GivenUp(version: Int) extends GameEvent
+final case class Terminated(version: Int) extends GameEvent

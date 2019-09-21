@@ -4,7 +4,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.MessageEvent
 import othello.core._
-import othello.service.{GameEvent, GameId, StonePut}
+import othello.service.{GameEvent, GameId}
 
 object GameComponent {
 
@@ -21,6 +21,35 @@ object GameComponent {
     def render(p: Props): VdomElement = {
       import p.game.othello
       <.div(
+        p.game.state match {
+          case Terminated(winner) =>
+            <.div(
+              winner match {
+                case Some(p.participantId) => "You win!"
+                case None => "Draw"
+                case _ => "You lose..."
+              },
+              <.button(
+                ^.onClick --> p.handler(BackToEntrance(p.participantId)),
+                "back to entrance"
+              )
+            )
+          case Waiting =>
+            <.div("waiting entry...")
+          case Playing =>
+            // FIXME プレイヤー視点のコンテキストに合わせて拡張すると、myTurnのような概念が使える
+            if (p.game.isTurnOf(p.participantId)) {
+              <.div(
+                <.button(
+                  ^.onClick --> p.handler(GiveUp(p.gameId, p.participantId)),
+                  "Give up"
+                )
+              )
+            } else {
+              <.div("wait...")
+            }
+          case _ => TagMod.empty
+        },
         <.table(<.tbody(
           (1 to 8).map { y =>
             <.tr(
@@ -40,8 +69,6 @@ object GameComponent {
             )
           }.toTagMod
         )),
-        // TODO: GiveUpボタンををつける
-        // TODO: 決着後のステートに対応する
         ScoreView.Props(p.game.othello.score).render
       )
     }
@@ -50,12 +77,10 @@ object GameComponent {
       ()
     }
     def handleMessageEvent(messageEvent: MessageEvent): Unit = {
-      import io.circe.parser._
       import io.circe.generic.auto._
+      import io.circe.parser._
       decode[GameEvent](messageEvent.data.toString).foreach {
-        case e: StonePut =>
-          $.props.flatMap(_.handler(ReceiveEvent(e))).runNow()
-        case _ =>
+        e => $.props.flatMap(_.handler(ReceiveEvent(e))).runNow()
       }
     }
   }

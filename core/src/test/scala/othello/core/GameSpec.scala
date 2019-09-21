@@ -32,8 +32,14 @@ object GameSpec extends TestSuite {
         // TODO
       }
     }
+    test("participantIdFromColor") {
+      startedGame.participantIdFromColor(Black) ==> Some(ownerId)
+      startedGame.participantIdFromColor(White) ==> Some(challengerId)
+    }
     test("giveUp") {
-      // TODO
+      test("valid") {
+        startedGame.giveUp.state ==> Terminated(Some(challengerId))
+      }
     }
     test("put stone") {
       test("valid") {
@@ -53,6 +59,15 @@ object GameSpec extends TestSuite {
       }
       test("is not turn") {
         startedGame.putStone(challengerId, validPos) ==> Left(IsNotTurn)
+      }
+      test("terminated") {
+        val terminatedGame = Game(
+          Othello(Map(Pos(1, 1) -> Black, Pos(1, 2) -> White), Black),
+          Playing, ownerId, Some(challengerId), true, 1)
+          .putStone(ownerId, Pos(1, 3)).right.get
+        terminatedGame.greaterColor ==> Some(Black)
+        terminatedGame.state ==> Terminated(Some(ownerId))
+        terminatedGame.winner ==> Some(ownerId)
       }
     }
   }

@@ -63,6 +63,20 @@ class ServiceImpl(gameRepository: GameRepository[Future], participantRepository:
       }
       case Left(e) => Future.successful(Left(e))
     }
+  override def giveUp(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, Game]] =
+    (for {
+      p <- participantRepository.find(participantId)
+      g <- gameRepository.find(gameId)
+    } yield {
+      for {
+        _ <- p.fold[Either[ServiceError, _]](Left(ParticipantNotFound))(x => Right(x))
+        game <- g.fold[Either[ServiceError, Game]](Left(GameNotFound))(x => Right(x))
+      } yield game.giveUp
+    }).flatMap {
+      case Right(game) =>
+        gameRepository.store(gameId, game).map(_ => Right(game))
+      case other => Future.successful(other)
+    }
 }
 
 class InMemoryGameRepository extends GameRepository[Future] {
@@ -79,6 +93,13 @@ class InMemoryGameRepository extends GameRepository[Future] {
   override def store(gameId: GameId, game: Game): Future[Option[Game]] = {
     games.update(gameId, game)
     Future.successful(Some(game))
+  }
+  override def delete(gameId: GameId): Future[Option[GameId]] = {
+    if (games.exists(_._1 == gameId)) {
+      games -= gameId
+      Future.successful(Some(gameId))
+    }
+    else Future.successful(None)
   }
 }
 

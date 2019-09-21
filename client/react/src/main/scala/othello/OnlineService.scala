@@ -39,16 +39,25 @@ class OnlineService extends Service[Future] with codec.Codec {
       .post("/games/entry", EntryRequest(gameId, participantId).asJson.noSpaces, headers = headers)
       .map(r =>
         decode[Either[ServiceError, EntryId]](r.responseText)
-          .fold (e => { Left(DecodeError)}, identity)
+          .fold(_ => {
+            Left(DecodeError)
+          }, identity)
       )
   def putStone(gameId: GameId, participantId: ParticipantId, pos: Pos): Future[Either[ServiceError, Game]] =
     Ajax
       .post("/games/putStone", PutStoneRequest(gameId, participantId, pos).asJson.noSpaces, headers = headers)
       .map { r =>
         decode[Either[ServiceError, Game]](r.responseText)
-          .fold(e => {
+          .fold(_ => {
             Left(DecodeError)
           }, identity)
+      }
+  override def giveUp(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, Game]] =
+    Ajax
+      .post("/games/giveUp", GiveUpRequest(gameId, participantId).asJson.noSpaces, headers = headers)
+      .map { r =>
+        decode[Either[ServiceError, Game]](r.responseText)
+          .fold(_ => Left(DecodeError), identity)
       }
 }
 
