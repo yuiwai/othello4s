@@ -6,14 +6,14 @@ final case class Game(
   ownerId: ParticipantId,
   challengerId: Option[ParticipantId],
   nextIsOwner: Boolean,
-  version: Int) {
+  version: GameVersion) {
   def putStone(actorId: ParticipantId, pos: Pos): Either[GameError, Game] =
     (state, isTurnOf(actorId)) match {
       case (Playing, true) =>
         othello.put(pos, othello.turn)
           .fold(
             e => Left(InvalidPos(e)),
-            o => Right(copy(o, version = version + 1, nextIsOwner = !nextIsOwner))
+            o => Right(copy(o, version = version.increment, nextIsOwner = !nextIsOwner))
               .map { g =>
                 g.copy(
                   state = if (o.isGameOver) Terminated(g.greaterColor.flatMap(g.participantIdFromColor))
@@ -46,10 +46,16 @@ final case class Game(
   def giveUp: Game = copy(state = Terminated(if (nextIsOwner) challengerId else Some(ownerId)))
 }
 object Game {
-  def apply(ownerId: ParticipantId): Game = apply(Othello(), Waiting, ownerId, None, nextIsOwner = true, 1)
+  def apply(ownerId: ParticipantId): Game = apply(Othello(), Waiting, ownerId, None, nextIsOwner = true, GameVersion.first)
 }
 
-// FIXME Stateごとに持つ状態が違うので、それらはStateに持たせるというのも一つの案
+final case class GameVersion(value: Int) extends AnyVal {
+  def increment: GameVersion = GameVersion(value + 1)
+}
+object GameVersion {
+  def first: GameVersion = apply(1)
+}
+
 sealed trait GameState
 case object Waiting extends GameState
 case object Prepared extends GameState

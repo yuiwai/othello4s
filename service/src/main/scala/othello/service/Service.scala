@@ -71,6 +71,6 @@ final case class PutStoneRequest(gameId: GameId, participantId: ParticipantId, p
 final case class GiveUpRequest(gameId: GameId, participantId: ParticipantId)
 
 sealed trait GameEvent
-final case class StonePut(participantId: ParticipantId, pos: Pos, version: Int) extends GameEvent
-final case class GivenUp(version: Int) extends GameEvent
-final case class Terminated(version: Int) extends GameEvent
+final case class StonePut(participantId: ParticipantId, pos: Pos, version: GameVersion) extends GameEvent
+final case class GivenUp(version: GameVersion) extends GameEvent
+final case class Terminated(version: GameVersion) extends GameEvent
