@@ -21,6 +21,7 @@ trait GameRepository[F[_]] {
   def create(ownerId: ParticipantId): F[GameId]
   def ownedBy(ownerId: ParticipantId): F[Option[Game]]
   def store(gameId: GameId, game: Game): F[Option[Game]] // FIXME 戻り値要検討
+  def delete(gameId: GameId): F[Option[GameId]]
 }
 
 final case class GameSummary(
