@@ -82,6 +82,7 @@ object RootComponent {
           }
           .toCallback
       }
+      case BackToEntrance(participantId) => act(LoadGames(participantId))
       // TODO version対応
       case ReceiveEvent(event) =>
         event match {

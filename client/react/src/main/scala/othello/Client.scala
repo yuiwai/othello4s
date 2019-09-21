@@ -68,3 +68,4 @@ sealed trait GameAction extends Action
 final case class PutStone(gameId: GameId, participantId: ParticipantId, pos: Pos) extends GameAction
 final case class GiveUp(gameId: GameId, participantId: ParticipantId) extends GameAction
 final case class ReceiveEvent(event: GameEvent) extends GameAction
+final case class BackToEntrance(participantId: ParticipantId) extends GameAction
