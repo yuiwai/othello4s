@@ -3,7 +3,7 @@ package othello
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import othello.core.Game
-import othello.service.{Service, StonePut, GivenUp}
+import othello.service.{GivenUp, Service, StonePut, Terminated}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -77,7 +77,8 @@ object RootComponent {
       case PutStone(gameId, participantId, pos) => bs.withService { service =>
         AsyncCallback.fromFuture(service.putStone(gameId, participantId, pos))
           .flatMap {
-            case Right(game) => bs.modState(_.modGame(_ => game)).asAsyncCallback
+            case Right(game) =>
+              bs.modState(_.modGame(_ => game)).asAsyncCallback
             case _ => Callback().asAsyncCallback
           }
           .toCallback
@@ -90,6 +91,8 @@ object RootComponent {
             bs.modState(_.modGame(game => game.putStone(participantId, pos).getOrElse(game)))
           case GivenUp(version) =>
             bs.modState(_.modGame(_.giveUp))
+          case Terminated(version) =>
+            bs.withProps(p => Callback(p.eventSourceConnection.close))
         }
       case GiveUp(gameId, participantId) => bs.withService { service =>
         (for {

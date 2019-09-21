@@ -78,6 +78,7 @@ object Server extends FailFastCirceSupport with codec.Codec {
               complete(service.putStone(gameId, participantId, pos).map {
                 case r@Right(game) =>
                   sendGameEvent(gameId, StonePut(participantId, pos, game.version))
+                  if (game.isTerminated) sendGameEvent(gameId, Terminated(game.version))
                   r
                 case l@Left(_) => l
               })
@@ -90,6 +91,7 @@ object Server extends FailFastCirceSupport with codec.Codec {
               complete(service.giveUp(gameId, participantId).map {
                 case r@Right(game) =>
                   sendGameEvent(gameId, GivenUp(game.version))
+                  sendGameEvent(gameId, Terminated(game.version))
                   r
                 case l@Left(_) => l
               })
