@@ -81,6 +81,18 @@ object Server extends FailFastCirceSupport with codec.Codec {
             }
           }
         },
+        path("games" / "giveUp") {
+          post {
+            entity(as[GiveUpRequest]) { case GiveUpRequest(gameId, participantId) =>
+              complete(service.giveUp(gameId, participantId).map {
+                case r@Right(game) =>
+                  sendGameEvent(gameId, GivenUp(game.version))
+                  r
+                case l@Left(_) => l
+              })
+            }
+          }
+        },
         path("events" / IntNumber) { id =>
           get {
             complete {

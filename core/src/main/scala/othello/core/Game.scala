@@ -26,6 +26,7 @@ final case class Game(
     (isOwner(participantId) && nextIsOwner) || (isChallenger(participantId) && !nextIsOwner)
   def isOwner(participantId: ParticipantId): Boolean = participantId == ownerId
   def isChallenger(participantId: ParticipantId): Boolean = challengerId.contains(participantId)
+  def isTerminated: Boolean = state.isInstanceOf[Terminated]
   def entry(newChallengerId: ParticipantId): Either[GameError, Game] = // FIXME state == Waitingも見た方がいい
     challengerId.fold[Either[GameError, Game]] {
       if (ownerId == newChallengerId) Left(SameAsOwnerId)

@@ -4,7 +4,7 @@ import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.MessageEvent
 import othello.core._
-import othello.service.{GameEvent, GameId, StonePut}
+import othello.service.{GameEvent, GameId}
 
 object GameComponent {
 
@@ -21,6 +21,16 @@ object GameComponent {
     def render(p: Props): VdomElement = {
       import p.game.othello
       <.div(
+        if (p.game.isTerminated) {
+          <.div("terminated")
+        } else {
+          <.div(
+            <.button(
+              ^.onClick --> p.handler(GiveUp(p.gameId, p.participantId)),
+              "GiveUp"
+            )
+          )
+        },
         <.table(<.tbody(
           (1 to 8).map { y =>
             <.tr(
@@ -50,12 +60,10 @@ object GameComponent {
       ()
     }
     def handleMessageEvent(messageEvent: MessageEvent): Unit = {
-      import io.circe.parser._
       import io.circe.generic.auto._
+      import io.circe.parser._
       decode[GameEvent](messageEvent.data.toString).foreach {
-        case e: StonePut =>
-          $.props.flatMap(_.handler(ReceiveEvent(e))).runNow()
-        case _ =>
+        e => $.props.flatMap(_.handler(ReceiveEvent(e))).runNow()
       }
     }
   }

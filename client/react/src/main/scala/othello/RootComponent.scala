@@ -3,7 +3,7 @@ package othello
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import othello.core.Game
-import othello.service.{Service, StonePut}
+import othello.service.{Service, StonePut, GivenUp}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -82,11 +82,20 @@ object RootComponent {
           }
           .toCallback
       }
+      // TODO version対応
       case ReceiveEvent(event) =>
         event match {
           case StonePut(participantId, pos, version) =>
             bs.modState(_.modGame(game => game.putStone(participantId, pos).getOrElse(game)))
+          case GivenUp(version) =>
+            bs.modState(_.modGame(_.giveUp))
         }
+      case GiveUp(gameId, participantId) => bs.withService { service =>
+        (for {
+          e <- AsyncCallback.fromFuture(service.giveUp(gameId, participantId))
+          _ <- e.fold(_ => act(LoadGame(gameId, participantId)), game => bs.modState(_.modGame(_ => game))).asAsyncCallback
+        } yield ()).toCallback
+      }
     }
     def render(p: Props, s: State): VdomElement =
       <.div(
