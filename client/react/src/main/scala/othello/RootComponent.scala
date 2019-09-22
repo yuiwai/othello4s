@@ -84,7 +84,6 @@ object RootComponent {
           .toCallback
       }
       case BackToEntrance(participantId) => act(LoadGames(participantId))
-      // TODO version対応
       case ReceiveEvent(currentParticipantId, event) =>
         event match {
           case StonePut(gameId, participantId, pos, version) =>
@@ -92,11 +91,18 @@ object RootComponent {
               .fold(act(LoadGame(gameId, currentParticipantId))) { game =>
                 bs.putGame(game.putStone(participantId, pos).getOrElse(game))
               })
-          // bs.modState(_.modGame(game => game.putStone(participantId, pos).getOrElse(game)))
           case GivenUp(gameId, version) =>
-            bs.modState(_.modGame(_.giveUp))
+            bs.withGame(_.filter(_.canAcceptVersion(version))
+              .fold(act(LoadGame(gameId, currentParticipantId))) { game =>
+                bs.putGame(game.giveUp)
+              })
           case Terminated(gameId, version) =>
-            bs.withProps(p => Callback(p.eventSourceConnection.close))
+            bs.withGame(_.filter(_.canAcceptVersion(version))
+              .fold(act(LoadGame(gameId, currentParticipantId))) { game =>
+                bs.withProps(p => Callback(p.eventSourceConnection.close))
+              })
+          case GameStarted(_, _) =>
+            bs.modState(_.modGame(_.start))
         }
       case GiveUp(gameId, participantId) => bs.withService { service =>
         (for {

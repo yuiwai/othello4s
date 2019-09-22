@@ -68,6 +68,7 @@ object Server extends FailFastCirceSupport with codec.Codec {
         path("games" / "entry") {
           post {
             entity(as[EntryRequest]) { case EntryRequest(gameId, participantId) =>
+              sendGameEvent(gameId, GameStarted(gameId, participantId))
               complete(service.entry(gameId, participantId))
             }
           }
