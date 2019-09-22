@@ -2,7 +2,7 @@ package othello
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import othello.core.{Game, PlayerMode}
+import othello.core.Game
 import othello.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -98,7 +98,7 @@ object RootComponent {
               })
           case Terminated(gameId, version) =>
             bs.withGame(_.filter(_.canAcceptVersion(version))
-              .fold(act(LoadGame(gameId, currentParticipantId))) { game =>
+              .fold(act(LoadGame(gameId, currentParticipantId))) { _ =>
                 bs.withProps(p => Callback(p.eventSourceConnection.close))
               })
           case GameStarted(_, _) =>

@@ -75,6 +75,9 @@ object GameSpec extends TestSuite {
         waitingGame.canAcceptVersion(GameVersion(2)) ==> false
         notStartedGame.canAcceptVersion(GameVersion(2)) ==> false
       }
+      test("timeout") {
+        startedGame.timeout.state ==> Terminated(Some(challengerId))
+      }
     }
   }
 }
