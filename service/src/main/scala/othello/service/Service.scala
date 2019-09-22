@@ -76,3 +76,4 @@ sealed trait GameEvent {
 final case class StonePut(gameId: GameId, participantId: ParticipantId, pos: Pos, version: GameVersion) extends GameEvent
 final case class GivenUp(gameId: GameId, version: GameVersion) extends GameEvent
 final case class Terminated(gameId: GameId, version: GameVersion) extends GameEvent
+final case class GameStarted(gameId: GameId, challengerId: ParticipantId) extends GameEvent

@@ -54,6 +54,7 @@ object GameComponent {
             // FIXME プレイヤー視点のコンテキストに合わせて拡張すると、myTurnのような概念が使える
             if (p.game.isTurnOf(p.participantId)) {
               <.div(
+                "Your turn.",
                 <.button(
                   ^.onClick --> p.handler(GiveUp(p.gameId, p.participantId)),
                   "Give up"
