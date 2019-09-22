@@ -7,7 +7,6 @@ import othello.core._
 import othello.service.{GameEvent, GameId}
 
 object GameComponent {
-
   final case class Props(
     participantId: ParticipantId,
     gameId: GameId,
@@ -18,22 +17,37 @@ object GameComponent {
   }
 
   final class Backend($: BackendScope[Props, Unit]) {
+    def backToEntranceButton(p: Props): VdomElement = {
+      <.button(
+        ^.onClick --> p.handler(BackToEntrance(p.participantId)),
+        "back to entrance"
+      )
+    }
+    def withIfWatchingMode(p: Props)(vdomElement: => VdomElement): VdomNode = {
+      if (p.game.mode(p.participantId) == WatchingMode) vdomElement
+      else EmptyVdom
+    }
     def render(p: Props): VdomElement = {
       import p.game.othello
       <.div(
         p.game.state match {
           case Terminated(winner) =>
-            <.div(
-              winner match {
-                case Some(p.participantId) => "You win!"
-                case None => "Draw"
-                case _ => "You lose..."
-              },
-              <.button(
-                ^.onClick --> p.handler(BackToEntrance(p.participantId)),
-                "back to entrance"
-              )
-            )
+            p.game.mode(p.participantId) match {
+              case WatchingMode =>
+                <.div(
+                  "Game is over!",
+                  backToEntranceButton(p)
+                )
+              case PlayerMode =>
+                <.div(
+                  winner match {
+                    case Some(p.participantId) => "You win!"
+                    case None => "Draw"
+                    case _ => "You lose..."
+                  },
+                  backToEntranceButton(p)
+                )
+            }
           case Waiting =>
             <.div("waiting entry...")
           case Playing =>
@@ -46,7 +60,10 @@ object GameComponent {
                 )
               )
             } else {
-              <.div("wait...")
+              <.div(
+                "wait...",
+                withIfWatchingMode(p)(backToEntranceButton(p))
+              )
             }
           case _ => TagMod.empty
         },
@@ -62,7 +79,11 @@ object GameComponent {
                   ^.textAlign := "center",
                   ^.width := "30px",
                   ^.height := "30px",
-                  ^.onClick --> p.handler(PutStone(p.gameId, p.participantId, Pos(x, y))),
+                  p.game.mode(p.participantId) match {
+                    case PlayerMode =>
+                      ^.onClick --> p.handler(PutStone(p.gameId, p.participantId, Pos(x, y)))
+                    case _ => TagMod.empty
+                  },
                   stone.fold("")(_ => "●")
                 )
               }.toTagMod
@@ -80,7 +101,7 @@ object GameComponent {
       import io.circe.generic.auto._
       import io.circe.parser._
       decode[GameEvent](messageEvent.data.toString).foreach {
-        e => $.props.flatMap(_.handler(ReceiveEvent(e))).runNow()
+        e => $.props.flatMap(p => p.handler(ReceiveEvent(p.participantId, e))).runNow()
       }
     }
   }

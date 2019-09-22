@@ -70,7 +70,9 @@ final case class EntryRequest(gameId: GameId, participantId: ParticipantId)
 final case class PutStoneRequest(gameId: GameId, participantId: ParticipantId, pos: Pos)
 final case class GiveUpRequest(gameId: GameId, participantId: ParticipantId)
 
-sealed trait GameEvent
-final case class StonePut(participantId: ParticipantId, pos: Pos, version: Int) extends GameEvent
-final case class GivenUp(version: Int) extends GameEvent
-final case class Terminated(version: Int) extends GameEvent
+sealed trait GameEvent {
+  val gameId: GameId
+}
+final case class StonePut(gameId: GameId, participantId: ParticipantId, pos: Pos, version: GameVersion) extends GameEvent
+final case class GivenUp(gameId: GameId, version: GameVersion) extends GameEvent
+final case class Terminated(gameId: GameId, version: GameVersion) extends GameEvent

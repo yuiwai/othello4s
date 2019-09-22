@@ -43,7 +43,7 @@ object GameSpec extends TestSuite {
     }
     test("put stone") {
       test("valid") {
-        startedGame.putStone(ownerId, validPos).right.get.version ==> 2
+        startedGame.putStone(ownerId, validPos).right.get.version ==> GameVersion(2)
       }
       test("waiting") {
         waitingGame.putStone(ownerId, validPos) ==> Left(NotPlaying)
@@ -63,12 +63,27 @@ object GameSpec extends TestSuite {
       test("terminated") {
         val terminatedGame = Game(
           Othello(Map(Pos(1, 1) -> Black, Pos(1, 2) -> White), Black),
-          Playing, ownerId, Some(challengerId), true, 1)
+          Playing, ownerId, Some(challengerId), true, GameVersion.first)
           .putStone(ownerId, Pos(1, 3)).right.get
         terminatedGame.greaterColor ==> Some(Black)
         terminatedGame.state ==> Terminated(Some(ownerId))
         terminatedGame.winner ==> Some(ownerId)
       }
+      test("can accept version") {
+        startedGame.canAcceptVersion(GameVersion(2)) ==> true
+        startedGame.canAcceptVersion(GameVersion(3)) ==> false
+        waitingGame.canAcceptVersion(GameVersion(2)) ==> false
+        notStartedGame.canAcceptVersion(GameVersion(2)) ==> false
+      }
+    }
+  }
+}
+
+object GameVersionSpec extends TestSuite {
+  val tests = Tests {
+    test("accept") {
+      GameVersion(1).accept(GameVersion(2)) ==> Some(GameVersion(2))
+      GameVersion(1).accept(GameVersion(3)) ==> None
     }
   }
 }

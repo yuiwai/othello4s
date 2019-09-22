@@ -25,6 +25,7 @@ object EntranceComponent {
                 )
               } else {
                 <.button(
+                  ^.onClick --> p.handler(LoadGame(g.gameId, p.participantId)),
                   "Watch"
                 )
               }
