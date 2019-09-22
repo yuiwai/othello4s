@@ -7,31 +7,10 @@ import othello.core._
 import othello.service.{GameEvent, GameId}
 
 object GameComponent {
-  sealed trait GameMode {
-    def asAppState(participantId: ParticipantId, gameId: GameId, game: Game, eventSourceConnection: EventSourceConnection): GameAppState
-  }
-  case object PlayerMode extends GameMode {
-    override def asAppState(
-      participantId: ParticipantId,
-      gameId: GameId,
-      game: Game,
-      eventSourceConnection: EventSourceConnection): GameAppState =
-      PlayingGame(participantId, gameId, game, eventSourceConnection)
-  }
-  case object WatchingMode extends GameMode {
-    override def asAppState(
-      participantId: ParticipantId,
-      gameId: GameId,
-      game: Game,
-      eventSourceConnection: EventSourceConnection): GameAppState =
-      WatchingGame(participantId, gameId, game, eventSourceConnection)
-  }
-
   final case class Props(
     participantId: ParticipantId,
     gameId: GameId,
     game: core.Game,
-    mode: GameMode,
     eventSourceConnection: EventSourceConnection,
     handler: GameAction => Callback) {
     @inline def render: VdomElement = Component(this)
@@ -45,7 +24,7 @@ object GameComponent {
       )
     }
     def withIfWatchingMode(p: Props)(vdomElement: => VdomElement): VdomNode = {
-      if (p.mode == WatchingMode) vdomElement
+      if (p.game.mode(p.participantId) == WatchingMode) vdomElement
       else EmptyVdom
     }
     def render(p: Props): VdomElement = {
@@ -53,7 +32,7 @@ object GameComponent {
       <.div(
         p.game.state match {
           case Terminated(winner) =>
-            p.mode match {
+            p.game.mode(p.participantId) match {
               case WatchingMode =>
                 <.div(
                   "Game is over!",
@@ -100,7 +79,7 @@ object GameComponent {
                   ^.textAlign := "center",
                   ^.width := "30px",
                   ^.height := "30px",
-                  p.mode match {
+                  p.game.mode(p.participantId) match {
                     case PlayerMode =>
                       ^.onClick --> p.handler(PutStone(p.gameId, p.participantId, Pos(x, y)))
                     case _ => TagMod.empty
@@ -122,7 +101,7 @@ object GameComponent {
       import io.circe.generic.auto._
       import io.circe.parser._
       decode[GameEvent](messageEvent.data.toString).foreach {
-        e => $.props.flatMap(_.handler(ReceiveEvent(e))).runNow()
+        e => $.props.flatMap(p => p.handler(ReceiveEvent(p.participantId, e))).runNow()
       }
     }
   }

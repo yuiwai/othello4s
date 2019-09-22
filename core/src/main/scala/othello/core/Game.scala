@@ -26,7 +26,11 @@ final case class Game(
     (isOwner(participantId) && nextIsOwner) || (isChallenger(participantId) && !nextIsOwner)
   def isOwner(participantId: ParticipantId): Boolean = participantId == ownerId
   def isChallenger(participantId: ParticipantId): Boolean = challengerId.contains(participantId)
+  def isPlaying: Boolean = state.isInstanceOf[Playing.type]
   def isTerminated: Boolean = state.isInstanceOf[Terminated]
+  def mode(participantId: ParticipantId): GameMode =
+    if (Set(isOwner _, isChallenger _).exists(_ (participantId))) PlayerMode else WatchingMode
+  def canAcceptVersion(targetVersion: GameVersion): Boolean = isPlaying && version.accept(targetVersion).isDefined
   def entry(newChallengerId: ParticipantId): Either[GameError, Game] = // FIXME state == Waitingも見た方がいい
     challengerId.fold[Either[GameError, Game]] {
       if (ownerId == newChallengerId) Left(SameAsOwnerId)
@@ -51,10 +55,15 @@ object Game {
 
 final case class GameVersion(value: Int) extends AnyVal {
   def increment: GameVersion = GameVersion(value + 1)
+  def accept(version: GameVersion): Option[GameVersion] = Some(version).filter(_ == increment)
 }
 object GameVersion {
   def first: GameVersion = apply(1)
 }
+
+sealed trait GameMode
+case object PlayerMode extends GameMode
+case object WatchingMode extends GameMode
 
 sealed trait GameState
 case object Waiting extends GameState

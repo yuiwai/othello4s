@@ -2,9 +2,8 @@ package othello
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import othello.GameComponent.{GameMode, PlayerMode, WatchingMode}
-import othello.core.Game
-import othello.service.{GivenUp, Service, StonePut, Terminated}
+import othello.core.{Game, PlayerMode}
+import othello.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -23,8 +22,6 @@ object RootComponent {
     def modGame(f: Game => Game): State = modAppState {
       case PlayingGame(participantId, gameId, game, eventSourceConnection) =>
         PlayingGame(participantId, gameId, f(game), eventSourceConnection)
-      case WatchingGame(participantId, gameId, game, eventSourceConnection) =>
-        WatchingGame(participantId, gameId, f(game), eventSourceConnection)
       case _ => this.rootModel.appState
     }
   }
@@ -42,13 +39,13 @@ object RootComponent {
             _ <- act(LoadGames(participantId)).asAsyncCallback
           } yield ()
         }.toCallback
-      case LoadGame(gameId, participantId, gameMode: GameMode) =>
+      case LoadGame(gameId, participantId) =>
         bs.withProps { props =>
           AsyncCallback.fromFuture(props.service.game(gameId))
             .flatMap {
               case Some(game) =>
                 bs.modState(_.modAppState(_ =>
-                  gameMode.asAppState(
+                  PlayingGame(
                     participantId,
                     gameId,
                     game,
@@ -69,13 +66,13 @@ object RootComponent {
           .fromFuture(p.service.createGame(participantId))
           .flatMap {
             case Right(gameSummary) =>
-              act(LoadGame(gameSummary.gameId, participantId, PlayerMode)).asAsyncCallback
+              act(LoadGame(gameSummary.gameId, participantId)).asAsyncCallback
             case _ =>
               act(LoadGames(participantId)).asAsyncCallback
           }.toCallback)
       case EntryGame(gameId, participantId) => bs.withService { service =>
         (AsyncCallback.fromFuture(service.entry(gameId, participantId))
-          >> act(LoadGame(gameId, participantId, PlayerMode)).asAsyncCallback).toCallback
+          >> act(LoadGame(gameId, participantId)).asAsyncCallback).toCallback
       }
       case PutStone(gameId, participantId, pos) => bs.withService { service =>
         AsyncCallback.fromFuture(service.putStone(gameId, participantId, pos))
@@ -88,19 +85,23 @@ object RootComponent {
       }
       case BackToEntrance(participantId) => act(LoadGames(participantId))
       // TODO version対応
-      case ReceiveEvent(event) =>
+      case ReceiveEvent(currentParticipantId, event) =>
         event match {
-          case StonePut(participantId, pos, version) =>
-            bs.modState(_.modGame(game => game.putStone(participantId, pos).getOrElse(game)))
-          case GivenUp(version) =>
+          case StonePut(gameId, participantId, pos, version) =>
+            bs.withGame(_.filter(_.canAcceptVersion(version))
+              .fold(act(LoadGame(gameId, currentParticipantId))) { game =>
+                bs.putGame(game.putStone(participantId, pos).getOrElse(game))
+              })
+          // bs.modState(_.modGame(game => game.putStone(participantId, pos).getOrElse(game)))
+          case GivenUp(gameId, version) =>
             bs.modState(_.modGame(_.giveUp))
-          case Terminated(version) =>
+          case Terminated(gameId, version) =>
             bs.withProps(p => Callback(p.eventSourceConnection.close))
         }
       case GiveUp(gameId, participantId) => bs.withService { service =>
         (for {
           e <- AsyncCallback.fromFuture(service.giveUp(gameId, participantId))
-          _ <- e.fold(_ => act(LoadGame(gameId, participantId, PlayerMode)), game => bs.modState(_.modGame(_ => game))).asAsyncCallback
+          _ <- e.fold(_ => act(LoadGame(gameId, participantId)), game => bs.modState(_.modGame(_ => game))).asAsyncCallback
         } yield ()).toCallback
       }
     }
@@ -111,9 +112,7 @@ object RootComponent {
           case Loading(_) => "Loading..."
           case Entrance(participantId, games) => EntranceComponent.Props(participantId, games, act).render
           case PlayingGame(participantId, gameId, game, eventSourceConnection) =>
-            GameComponent.Props(participantId, gameId, game, PlayerMode, eventSourceConnection, act).render
-          case WatchingGame(participantId, gameId, game, eventSourceConnection) =>
-            GameComponent.Props(participantId, gameId, game, WatchingMode, eventSourceConnection, act).render
+            GameComponent.Props(participantId, gameId, game, eventSourceConnection, act).render
         }
       )
   }
@@ -125,6 +124,14 @@ object RootComponent {
     def withServiceAsync[A](f: Service[Future] => AsyncCallback[A]): AsyncCallback[A] =
       bs.props.map(_.service).asAsyncCallback >>= f
     def modAppState(f: AppState => AppState): Callback = bs.modState(_.modAppState(f))
+    def withGame(f: Option[Game] => Callback): Callback = bs.state.flatMap(_.rootModel.appState match {
+      case gas: GameAppState => f(Some(gas.game))
+      case _ => f(None)
+    })
+    def putGame(game: Game): Callback = modAppState {
+      case gas: GameAppState => gas.putGame(game)
+      case other => other
+    }
   }
 
   val Component = ScalaComponent.builder[Props]("RootComponent")
