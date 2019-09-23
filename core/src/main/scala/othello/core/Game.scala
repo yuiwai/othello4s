@@ -31,6 +31,7 @@ final case class Game(
   def mode(participantId: ParticipantId): GameMode =
     if (Set(isOwner _, isChallenger _).exists(_ (participantId))) PlayerMode else WatchingMode
   def canAcceptVersion(targetVersion: GameVersion): Boolean = isPlaying && version.accept(targetVersion).isDefined
+  def currentTurn: Option[ParticipantId] = participantIdFromColor(othello.turn)
   def entry(newChallengerId: ParticipantId): Either[GameError, Game] = // FIXME state == Waitingも見た方がいい
     challengerId.fold[Either[GameError, Game]] {
       if (ownerId == newChallengerId) Left(SameAsOwnerId)
@@ -47,7 +48,9 @@ final case class Game(
     case _ => None
   }
   def start: Game = copy(state = Playing)
-  def giveUp: Game = copy(state = Terminated(if (nextIsOwner) challengerId else Some(ownerId)))
+  // TODO version更新など、共通系の処理が漏れるので、状態更新処理フローを共通化したい
+  def giveUp: Game = copy(state = Terminated(if (nextIsOwner) challengerId else Some(ownerId)), version = version.increment)
+  def timeout: Game = copy(state = Terminated(if (nextIsOwner) challengerId else Some(ownerId)), version = version.increment)
 }
 object Game {
   def apply(ownerId: ParticipantId): Game = apply(Othello(), Waiting, ownerId, None, nextIsOwner = true, GameVersion.first)
