@@ -2,7 +2,7 @@ package othello
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import othello.core.ParticipantId
+import othello.core.{ParticipantId, ParticipantName, Waiting}
 import othello.service.GameSummary
 
 object EntranceComponent {
@@ -14,20 +14,25 @@ object EntranceComponent {
   final class Backend($: BackendScope[Props, Unit]) {
     def render(p: Props): VdomElement =
       <.div(
-        p.games.map { g =>
+        <.h2("ゲーム一覧"),
+        if (p.games.isEmpty) <.div("アクティブなゲームがありません。")
+        else p.games.map { g =>
           <.div(
-            g.gameId.value,
-            g.ownerName.value,
-            s"(${g.gameState})",
+            g.gameState match {
+              case Waiting =>
+                s"${g.ownerName.value} 【参加受付中】"
+              case _ =>
+                s"${g.ownerName.value} x ${g.challengerName.getOrElse(ParticipantName.noName).value} 【対戦中】"
+            },
             if (g.isPlaying) {
               if (g.isParticipating(p.participantId)) {
                 <.button(
-                  "Open"
+                  "再開する"
                 )
               } else {
                 <.button(
                   ^.onClick --> p.handler(LoadGame(g.gameId, p.participantId)),
-                  "Watch"
+                  "観戦する"
                 )
               }
             } else {
@@ -36,14 +41,16 @@ object EntranceComponent {
                   p.handler(EntryGame(g.gameId, p.participantId))
                 },
                 if (g.ownerId == p.participantId) ^.display.none else TagMod.empty,
-                "Entry"
+                "参加する"
               )
             }
           )
         }.toTagMod,
-        <.button(
-          ^.onClick --> p.handler(CreateGame(p.participantId)),
-          "create game"
+        <.div(
+          <.button(
+            ^.onClick --> p.handler(CreateGame(p.participantId)),
+            "新規ゲームを作成する"
+          )
         )
       )
   }
