@@ -5,7 +5,7 @@ import othello.core._
 import scala.language.higherKinds
 
 trait Service[F[_]] {
-  def participate: F[ParticipantId]
+  def participate(name: ParticipantName): F[ParticipantId]
   def allGames(participantId: ParticipantId): F[Seq[GameSummary]]
   def game(gameId: GameId): F[Option[Game]]
   def createGame(participantId: ParticipantId): F[Either[ServiceError, GameSummary]]
@@ -18,9 +18,9 @@ final case class GameId(value: Int) extends AnyVal
 trait GameRepository[F[_]] {
   def all: F[Seq[(GameId, Game)]]
   def find(gameId: GameId): F[Option[Game]]
-  def create(ownerId: ParticipantId): F[GameId]
   def ownedBy(ownerId: ParticipantId): F[Option[Game]]
   def store(gameId: GameId, game: Game): F[Option[Game]] // FIXME 戻り値要検討
+  def store(game: Game): F[Option[GameId]]
   def delete(gameId: GameId): F[Option[GameId]]
 }
 
@@ -28,7 +28,9 @@ final case class GameSummary(
   gameId: GameId,
   gameState: GameState,
   ownerId: ParticipantId,
-  challengerId: Option[ParticipantId]
+  ownerName: ParticipantName,
+  challengerId: Option[ParticipantId],
+  challengerName: Option[ParticipantName]
 ) {
   def isPlaying: Boolean = gameState == Playing
   def isParticipating(participantId: ParticipantId): Boolean =
@@ -57,15 +59,18 @@ object ServiceError {
 
 trait ParticipantRepository[F[_]] {
   def find(participantId: ParticipantId): F[Option[Participant]]
-  def create: F[ParticipantId]
+  def findByIds(participantIds: Seq[ParticipantId]): F[Map[ParticipantId, Participant]]
+  def store(participant: Participant): F[ParticipantId]
 }
 
+// FIXME 不要なので削除
 final case class EntryId(value: Int) extends AnyVal
 trait Entry {
   val gameId: GameId
   val entryId: EntryId
 }
 
+final case class ParticipateRequest(name: ParticipantName)
 final case class EntryRequest(gameId: GameId, participantId: ParticipantId)
 final case class PutStoneRequest(gameId: GameId, participantId: ParticipantId, pos: Pos)
 final case class GiveUpRequest(gameId: GameId, participantId: ParticipantId)

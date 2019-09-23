@@ -36,7 +36,9 @@ object Server extends FailFastCirceSupport with codec.Codec {
       concat(
         path("participants" / "create") {
           post {
-            complete(service.participate)
+            entity(as[ParticipateRequest]) { request =>
+              complete(service.participate(request.name))
+            }
           }
         },
         path("games") {
@@ -212,7 +214,7 @@ object GameCleaner {
   }
   object ThinkingTime {
     def apply(game: Game, limit: Int, current: Int = 0): Option[ThinkingTime] =
-      game.currentTurn.map(_ => apply(game.version, current, limit))
+      game.currentTurn.map(_ => apply(game.version, limit, current))
   }
   def props(gameRepository: GameRepository[Future]): Props = Props(new GameCleaner(gameRepository))
 }

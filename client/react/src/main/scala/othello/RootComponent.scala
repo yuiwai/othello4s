@@ -2,7 +2,7 @@ package othello
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import othello.core.Game
+import othello.core.{Game, ParticipantName}
 import othello.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -35,7 +35,7 @@ object RootComponent {
       case Participate =>
         bs.withServiceAsync { service =>
           for {
-            participantId <- AsyncCallback.fromFuture(service.participate)
+            participantId <- AsyncCallback.fromFuture(service.participate(ParticipantName.noName))
             _ <- act(LoadGames(participantId)).asAsyncCallback
           } yield ()
         }.toCallback

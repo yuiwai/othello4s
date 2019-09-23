@@ -20,7 +20,7 @@ object GameComponent {
     def backToEntranceButton(p: Props): VdomElement = {
       <.button(
         ^.onClick --> p.handler(BackToEntrance(p.participantId)),
-        "back to entrance"
+        "ゲーム一覧に戻る"
       )
     }
     def withIfWatchingMode(p: Props)(vdomElement: => VdomElement): VdomNode = {
@@ -35,36 +35,39 @@ object GameComponent {
             p.game.mode(p.participantId) match {
               case WatchingMode =>
                 <.div(
-                  "Game is over!",
+                  "ゲーム終了",
                   backToEntranceButton(p)
                 )
               case PlayerMode =>
                 <.div(
                   winner match {
-                    case Some(p.participantId) => "You win!"
-                    case None => "Draw"
-                    case _ => "You lose..."
+                    case Some(p.participantId) => "あなたの勝ちです!"
+                    case None => "引き分けです"
+                    case _ => "あなたの負けです..."
                   },
                   backToEntranceButton(p)
                 )
             }
           case Waiting =>
-            <.div("waiting entry...")
+            <.div("参加者を待っています...")
           case Playing =>
-            // FIXME プレイヤー視点のコンテキストに合わせて拡張すると、myTurnのような概念が使える
-            if (p.game.isTurnOf(p.participantId)) {
-              <.div(
-                "Your turn.",
-                <.button(
-                  ^.onClick --> p.handler(GiveUp(p.gameId, p.participantId)),
-                  "Give up"
-                )
-              )
-            } else {
-              <.div(
-                "wait...",
-                withIfWatchingMode(p)(backToEntranceButton(p))
-              )
+            p.game.mode(p.participantId) match {
+              case WatchingMode => <.div("観戦中です")
+              case PlayerMode =>
+                if (p.game.isTurnOf(p.participantId)) {
+                  <.div(
+                    "あなたの番です",
+                    <.button(
+                      ^.onClick --> p.handler(GiveUp(p.gameId, p.participantId)),
+                      "投了"
+                    )
+                  )
+                } else {
+                  <.div(
+                    "相手の番です...",
+                    withIfWatchingMode(p)(backToEntranceButton(p))
+                  )
+                }
             }
           case _ => TagMod.empty
         },
@@ -124,7 +127,7 @@ object ScoreView {
   final class Backend($: BackendScope[Props, Unit]) {
     def render(p: Props): VdomElement =
       <.div(
-        s"Black: ${p.score(Black)} - White: ${p.score(White)}"
+        s"黒: ${p.score(Black)} - 白: ${p.score(White)}"
       )
   }
 
