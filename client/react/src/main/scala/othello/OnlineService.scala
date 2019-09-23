@@ -5,7 +5,7 @@ import io.circe.generic.auto._
 import io.circe.parser._
 import io.circe.syntax._
 import org.scalajs.dom.ext.Ajax
-import othello.core.{Game, ParticipantId, Pos, StoneColor}
+import othello.core._
 import othello.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -16,8 +16,9 @@ class OnlineService extends Service[Future] with codec.Codec {
   def post[R: io.circe.Decoder](url: String, json: Json = Json.Null): Future[Either[io.circe.Error, R]] =
     Ajax.post(url, json.noSpaces, headers = headers)
       .map[Either[io.circe.Error, R]](r => decode[R](r.responseText))
-  override def participate: Future[ParticipantId] =
-    post[ParticipantId]("/participants/create").map(_.getOrElse(ParticipantId(0)))
+  override def participate(name: ParticipantName): Future[ParticipantId] =
+    post[ParticipantId]("/participants/create", ParticipateRequest(ParticipantName.noName).asJson)
+      .map(_.getOrElse(ParticipantId(0)))
   override def allGames(participantId: ParticipantId): Future[Seq[GameSummary]] =
     Ajax
       .post("/games", participantId.asJson.noSpaces, headers = headers)

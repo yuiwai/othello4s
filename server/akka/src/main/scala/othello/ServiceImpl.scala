@@ -9,12 +9,15 @@ import scala.concurrent.Future
 
 class ServiceImpl(gameRepository: GameRepository[Future], participantRepository: ParticipantRepository[Future])
   extends Service[Future] {
-  override def participate: Future[ParticipantId] = participantRepository.create
+  override def participate(name: ParticipantName): Future[ParticipantId] =
+    participantRepository.store(Participant(name))
   override def allGames(participantId: ParticipantId): Future[Seq[GameSummary]] =
     for {
       p <- participantRepository.find(participantId)
-      g <- gameRepository.all.map(_.map {
-        case (gameId, game) => GameSummary(gameId, game.state, game.ownerId, game.challengerId)
+      g <- gameRepository.all.map(games => games.map {
+        case (gameId, game) =>
+          // FIXME 暫定でnoName
+          GameSummary(gameId, game.state, game.ownerId, ParticipantName.noName, game.challengerId, Some(ParticipantName.noName))
       })
     } yield p.fold(Seq.empty[GameSummary])(_ => g)
   override def game(gameId: GameId): Future[Option[Game]] = gameRepository.find(gameId)
@@ -24,8 +27,12 @@ class ServiceImpl(gameRepository: GameRepository[Future], participantRepository:
       o <- gameRepository.ownedBy(participantId)
       if o.isEmpty // FIXME Serviceで判断を行なっている
       g <- gameRepository
-        .create(participantId)
-        .map(id => Right(GameSummary(id, Waiting, participantId, None)))
+        .store(Game(participantId))
+        .map {
+          // FIXME 暫定でnoName
+          case Some(id) => Right(GameSummary(id, Waiting, participantId, ParticipantName.noName, None, None))
+          case None => Left(GameStoreFailed)
+        }
     } yield p.fold[Either[ServiceError, GameSummary]](Left(ParticipantNotFound))(_ => g)) recover {
       case _: NoSuchElementException => Left(OwnedGameExists)
     }
@@ -55,7 +62,7 @@ class ServiceImpl(gameRepository: GameRepository[Future], participantRepository:
         game <- g.fold[Either[ServiceError, Game]](Left(GameNotFound))(x => Right(x))
       } yield game.putStone(participantId, pos)
     }).flatMap {
-      case Right(g) => g match {
+      case Right(x) => x match {
         case Right(g) =>
           gameRepository.store(gameId, g)
             .map(_.fold[Either[ServiceError, Game]](Left(GameStoreFailed))(game => Right(game)))
@@ -83,16 +90,15 @@ class InMemoryGameRepository extends GameRepository[Future] {
   private val games: mutable.Map[GameId, Game] = mutable.Map.empty
   override def all: Future[Seq[(GameId, Game)]] = Future.successful(games.toSeq)
   override def find(gameId: GameId): Future[Option[Game]] = Future.successful(games.get(gameId))
-  override def create(ownerId: ParticipantId): Future[GameId] = {
-    val gameId = GameId(games.size + 1)
-    games.update(gameId, Game(ownerId))
-    Future.successful(gameId)
-  }
   override def ownedBy(ownerId: ParticipantId): Future[Option[Game]] =
     Future.successful(games.values.find(_.ownerId == ownerId))
   override def store(gameId: GameId, game: Game): Future[Option[Game]] = {
     games.update(gameId, game)
     Future.successful(Some(game))
+  }
+  override def store(game: Game): Future[Option[GameId]] = {
+    val gameId = GameId(games.size + 1)
+    store(gameId, game).map(_.map(_ => gameId))
   }
   override def delete(gameId: GameId): Future[Option[GameId]] = {
     if (games.exists(_._1 == gameId)) {
@@ -107,9 +113,16 @@ class InMemoryParticipantRepository extends ParticipantRepository[Future] {
   private val participants: mutable.Map[ParticipantId, Participant] = mutable.Map.empty
   override def find(participantId: ParticipantId): Future[Option[Participant]] =
     Future.successful(participants.get(participantId))
-  override def create: Future[ParticipantId] = {
+  override def findByIds(participantIds: Seq[ParticipantId]): Future[Map[ParticipantId, Participant]] = {
+    Future.traverse(participantIds)(participantId => find(participantId).map(participantId -> _))
+      .map(_.foldLeft(Map.empty[ParticipantId, Participant]) {
+        case (acc, (participantId, Some(participant))) => acc.updated(participantId, participant)
+        case (acc, _) => acc
+      })
+  }
+  override def store(participant: Participant): Future[ParticipantId] = {
     val participantId = ParticipantId(participants.size + 1)
-    participants.update(participantId, Free() /* FIXME Participant impl */)
+    participants.update(participantId, participant)
     Future.successful(participantId)
   }
 }

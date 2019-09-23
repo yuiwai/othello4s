@@ -17,6 +17,7 @@ object EntranceComponent {
         p.games.map { g =>
           <.div(
             g.gameId.value,
+            g.ownerName.value,
             s"(${g.gameState})",
             if (g.isPlaying) {
               if (g.isParticipating(p.participantId)) {
