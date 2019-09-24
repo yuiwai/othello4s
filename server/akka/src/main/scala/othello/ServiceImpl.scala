@@ -70,6 +70,24 @@ class ServiceImpl(gameRepository: GameRepository[Future], participantRepository:
       }
       case Left(e) => Future.successful(Left(e))
     }
+  override def pass(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, Game]] =
+    (for {
+      p <- participantRepository.find(participantId)
+      g <- gameRepository.find(gameId)
+    } yield {
+      for {
+        _ <- p.fold[Either[ServiceError, _]](Left(ParticipantNotFound))(x => Right(x))
+        game <- g.fold[Either[ServiceError, Game]](Left(GameNotFound))(x => Right(x))
+      } yield game.pass(participantId)
+    }).flatMap {
+      case Right(x) => x match {
+        case Right(passedGame) => gameRepository.store(gameId, passedGame)
+          .map(_.fold[Either[ServiceError, Game]](Left(GameStoreFailed))(Right(_)))
+        case Left(_) => Future.successful(Left(PassError))
+      }
+      case Left(e) => Future.successful(Left(e))
+    }
+
   override def giveUp(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, Game]] =
     (for {
       p <- participantRepository.find(participantId)

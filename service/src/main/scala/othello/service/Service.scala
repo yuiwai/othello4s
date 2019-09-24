@@ -11,6 +11,7 @@ trait Service[F[_]] {
   def createGame(participantId: ParticipantId): F[Either[ServiceError, GameSummary]]
   def entry(gameId: GameId, participantId: ParticipantId): F[Either[ServiceError, EntryId]]
   def putStone(gameId: GameId, participantId: ParticipantId, pos: Pos): F[Either[ServiceError, Game]]
+  def pass(gameId: GameId, participantId: ParticipantId): F[Either[ServiceError, Game]]
   def giveUp(gameId: GameId, participantId: ParticipantId): F[Either[ServiceError, Game]]
 }
 
@@ -44,6 +45,7 @@ case object GameNotFound extends ServiceError
 case object OwnedGameExists extends ServiceError
 case object GameStarted extends ServiceError
 case object PutError extends ServiceError
+case object PassError extends ServiceError
 case object GameStoreFailed extends ServiceError
 
 object ServiceError {
@@ -73,6 +75,7 @@ trait Entry {
 final case class ParticipateRequest(name: ParticipantName)
 final case class EntryRequest(gameId: GameId, participantId: ParticipantId)
 final case class PutStoneRequest(gameId: GameId, participantId: ParticipantId, pos: Pos)
+final case class PassRequest(gameId: GameId, participantId: ParticipantId)
 final case class GiveUpRequest(gameId: GameId, participantId: ParticipantId)
 
 sealed trait GameEvent {

@@ -28,13 +28,14 @@ final case class Othello(stones: Map[Pos, StoneColor], turn: StoneColor) {
   def score: Map[StoneColor, Int] = stones.foldLeft[Map[StoneColor, Int]](Map(White -> 0, Black -> 0)) {
     case (acc, (_, color)) => acc.updated(color, acc(color) + 1)
   }
+  def canNotPut: Boolean = canPutAll.isEmpty
   def canPutAll: Set[Arrangement] =
     (for {
       x <- 1 to 8
       y <- 1 to 8
       if put(x, y, turn).isRight
     } yield Arrangement(x, y, turn)).toSet
-  def isGameOver: Boolean = score.values.sum == 64 || (canPutAll.isEmpty && pass.canPutAll.isEmpty)
+  def isGameOver: Boolean = score.values.sum == 64 || (canNotPut && reverseTurn.canNotPut)
   private def mapStone(pos: Pos)(f: Option[StoneColor] => StoneColor): Othello =
     copy(stones = stones.updated(pos, f(stones.get(pos))))
   def put(pos: Pos, color: StoneColor): Either[OthelloError, Othello] = {
@@ -43,15 +44,16 @@ final case class Othello(stones: Map[Pos, StoneColor], turn: StoneColor) {
     else if (color != turn) Left(OthersTurn)
     else mapStone(pos) { _ => color }
       .applyReverse(pos)
-      .map(_.pass)
+      .map(_.reverseTurn)
   }
   def put(x: Int, y: Int, color: StoneColor): Either[OthelloError, Othello] = put(Pos(x, y), color)
+  def pass: Either[OthelloError, Othello] = if (canNotPut) Right(reverseTurn) else Left(CanNotPass)
   def applyReverse(pos: Pos): Either[OthelloError, Othello] =
     chains(pos).flatMap(_.reverse) match {
       case xs if xs.isEmpty => Left(NoReverse)
       case xs => Right(xs.foldLeft(this) { case (acc, a) => acc.mapStone(a.pos)(_ => a.color) })
     }
-  def pass: Othello = copy(turn = turn.reverse)
+  private def reverseTurn: Othello = copy(turn = turn.reverse)
 }
 
 object Othello {
@@ -115,3 +117,5 @@ case object OutOfBoard extends OthelloError
 case object StoneDuplication extends OthelloError
 case object NoReverse extends OthelloError
 case object OthersTurn extends OthelloError
+case object CanNotPass extends OthelloError
+
