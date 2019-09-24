@@ -123,6 +123,7 @@ object RootComponent {
           _ <- e.fold(_ => act(LoadGame(gameId, participantId)), game => bs.modState(_.modGame(_ => game))).asAsyncCallback
         } yield ()).toCallback
       }
+      case BeginEditMode(participantId) => bs.modState(_.modAppState(_ => Edit(participantId)))
     }
     def render(p: Props, s: State): VdomElement =
       <.div(
@@ -132,6 +133,7 @@ object RootComponent {
           case Entrance(participantId, games) => EntranceComponent.Props(participantId, games, act).render
           case PlayingGame(participantId, gameId, game, eventSourceConnection) =>
             GameComponent.Props(participantId, gameId, game, eventSourceConnection, act).render
+          case Edit(participantId) => EditComponent.Props().render
         }
       )
   }

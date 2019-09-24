@@ -50,6 +50,10 @@ object EntranceComponent {
           <.button(
             ^.onClick --> p.handler(CreateGame(p.participantId)),
             "新規ゲームを作成する"
+          ),
+          <.button(
+            ^.onClick --> p.handler(BeginEditMode(p.participantId)),
+            "【デバッグ】エディットモードを起動"
           )
         )
       )

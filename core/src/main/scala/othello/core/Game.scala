@@ -77,7 +77,6 @@ object GameVersion {
 sealed trait GameMode
 case object PlayerMode extends GameMode
 case object WatchingMode extends GameMode
-case object EditMode extends GameMode
 
 sealed trait GameState
 case object Waiting extends GameState

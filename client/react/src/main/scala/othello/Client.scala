@@ -62,6 +62,9 @@ final case class PlayingGame(
 ) extends GameAppState {
   override def putGame(game: Game): GameAppState = copy(game = game)
 }
+final case class Edit(
+  participantId: ParticipantId
+) extends AuthenticatedAppState
 
 sealed trait Action
 case object Participate extends Action
@@ -69,6 +72,7 @@ final case class LoadGames(participantId: ParticipantId) extends Action
 final case class LoadGame(gameId: GameId, participantId: ParticipantId) extends Action
 final case class CreateGame(participantId: ParticipantId) extends Action
 final case class EntryGame(gameId: GameId, participantId: ParticipantId) extends Action
+final case class BeginEditMode(participantId: ParticipantId) extends Action
 
 sealed trait GameAction extends Action
 final case class PutStone(gameId: GameId, participantId: ParticipantId, pos: Pos) extends GameAction
