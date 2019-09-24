@@ -84,10 +84,12 @@ lazy val akkaServer =
       pipelineStages in Assets := Seq(scalaJSPipeline),
       WebKeys.packagePrefix in Assets := "public/",
       managedClasspath in Runtime += (packageBin in Assets).value,
-      compile in Compile := ((compile in Compile) dependsOn scalaJSPipeline).value
+      compile in Compile := ((compile in Compile) dependsOn scalaJSPipeline).value,
+
+      dockerExposedPorts ++= Seq(8080)
     )
     .dependsOn(serviceJVM, circeCodecJVM)
-    .enablePlugins(WebScalaJSBundlerPlugin)
+    .enablePlugins(WebScalaJSBundlerPlugin, JavaServerAppPackaging, DockerPlugin)
 
 lazy val reactClient =
   project
@@ -102,7 +104,7 @@ lazy val reactClient =
       npmDependencies in Compile ++= Seq(
         "react" -> "16.7.0",
         "react-dom" -> "16.7.0"
-      )
+      ),
     )
     .dependsOn(serviceJS, circeCodecJS)
     .enablePlugins(ScalaJSBundlerPlugin)

@@ -122,11 +122,11 @@ object Server extends FailFastCirceSupport with codec.Codec {
             }
           }
         },
-        pathPrefix("assets") {
-          getFromResourceDirectory("assets/")
-        },
         pathPrefix("public") {
           getFromResourceDirectory("public/")
+        },
+        pathPrefix("assets") {
+          getFromResourceDirectory("assets/")
         },
 
         // DEBUG
