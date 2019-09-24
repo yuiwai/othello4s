@@ -6,7 +6,7 @@ import othello.core.{Board, Pos}
 
 object BoardComponent {
 
-  final case class Props(board: Board, handler: Pos => Callback) {
+  final case class Props(board: Board, handler: Pos => Callback, effect: Pos => Boolean = { _ => false }) {
     @inline def render: VdomElement = Component(this)
   }
 
@@ -16,17 +16,19 @@ object BoardComponent {
         (1 to 8).map { y =>
           <.tr(
             (1 to 8).map { x =>
-              val stone = p.board.get(Pos(x, y))
+              val pos = Pos(x, y)
+              val stone = p.board.get(pos)
               <.td(
                 // TODO Styleは切り出したい
                 ^.color := stone.fold("black")(_.toString),
                 ^.borderSpacing := "1px",
-                ^.backgroundColor := "green",
+                // TODO 暫定で、マスの背景色を変える機能
+                ^.backgroundColor := (if (p.effect(pos)) "skyblue" else "green"),
                 ^.textAlign := "center",
                 ^.width := "30px",
                 ^.height := "30px",
                 ^.cursor := "pointer",
-                ^.onClick --> p.handler(Pos(x, y)),
+                ^.onClick --> p.handler(pos),
                 stone.fold("")(_ => "●")
               )
             }.toTagMod

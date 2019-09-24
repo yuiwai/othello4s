@@ -2,8 +2,8 @@ package othello
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import othello.EditComponent.PutBlack
-import othello.core.{Board, Game, ParticipantName}
+import othello.GameComponent.GameSettings
+import othello.core.{Game, ParticipantName}
 import othello.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -20,15 +20,18 @@ object RootComponent {
   final case class State(rootModel: RootModel) {
     def modRoot(f: RootModel => RootModel): State = copy(f(rootModel))
     def modAppState(f: AppState => AppState): State = modRoot(root => root.copy(appState = f(root.appState)))
+    def modGlobalState(f: GlobalState => GlobalState): State = modRoot(root => root.copy(globalState = f(root.globalState)))
     def modGame(f: Game => Game): State = modAppState {
       case PlayingGame(participantId, gameId, game, eventSourceConnection) =>
         PlayingGame(participantId, gameId, f(game), eventSourceConnection)
       case _ => this.rootModel.appState
     }
+    def modGameSettings(f: GameSettings => GameSettings): State =
+      modGlobalState(gs => gs.copy(gameSettings = f(gs.gameSettings)))
   }
 
   object State {
-    def init: State = State(RootModel(Initializing))
+    def init: State = State(RootModel(GlobalState(GameSettings()), Initializing))
   }
 
   final class Backend(bs: BackendScope[Props, State]) {
@@ -125,6 +128,9 @@ object RootComponent {
         } yield ()).toCallback
       }
 
+      case UpdateGameSettings(settings) =>
+        bs.modState(_.modGameSettings(_ => settings))
+
       // DEBUG
       case BeginEditMode(participantId) => bs.modState(_.modAppState(_ => Edit(participantId)))
       case CreateCustomGame(participantId, board) =>
@@ -144,7 +150,12 @@ object RootComponent {
           case Loading(_) => "Loading..."
           case Entrance(participantId, games) => EntranceComponent.Props(participantId, games, act).render
           case PlayingGame(participantId, gameId, game, eventSourceConnection) =>
-            GameComponent.Props(participantId, gameId, game, eventSourceConnection, act).render
+            GameComponent.Props(
+              participantId,
+              gameId,
+              game,
+              s.rootModel.globalState.gameSettings,
+              eventSourceConnection, act).render
           case Edit(participantId) => EditComponent.Props(participantId, act).render
         }
       )

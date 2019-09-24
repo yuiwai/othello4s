@@ -3,6 +3,7 @@ package othello
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.MessageEvent
+import othello.GameComponent.GameSettings
 import othello.core._
 import othello.service.{GameEvent, GameId}
 
@@ -11,9 +12,16 @@ object GameComponent {
     participantId: ParticipantId,
     gameId: GameId,
     game: core.Game,
+    settings: GameSettings,
     eventSourceConnection: EventSourceConnection,
     handler: GameAction => Callback) {
     @inline def render: VdomElement = Component(this)
+  }
+
+  final case class GameSettings(
+    useHint: Boolean = false
+  ) {
+    def tglUseHint: GameSettings = copy(useHint = !useHint)
   }
 
   final class Backend($: BackendScope[Props, Unit]) {
@@ -77,30 +85,14 @@ object GameComponent {
             }
           case _ => TagMod.empty
         },
-        <.table(<.tbody(
-          (1 to 8).map { y =>
-            <.tr(
-              (1 to 8).map { x =>
-                val stone = othello.get(x, y)
-                <.td(
-                  ^.color := stone.fold("black")(_.toString),
-                  ^.borderSpacing := "1px",
-                  ^.backgroundColor := "green",
-                  ^.textAlign := "center",
-                  ^.width := "30px",
-                  ^.height := "30px",
-                  p.game.mode(p.participantId) match {
-                    case PlayerMode =>
-                      ^.onClick --> p.handler(PutStone(p.gameId, p.participantId, Pos(x, y)))
-                    case _ => TagMod.empty
-                  },
-                  stone.fold("")(_ => "●")
-                )
-              }.toTagMod
-            )
-          }.toTagMod
-        )),
-        ScoreView.Props(p.game.othello.score).render
+        BoardComponent.Props(p.game.othello.board, { pos =>
+          p.game.mode(p.participantId) match {
+            case PlayerMode => p.handler(PutStone(p.gameId, p.participantId, pos))
+            case _ => Callback.empty
+          }
+        }, if (p.settings.useHint) p.game.othello.canPutAll.map(arr => arr.pos) else _ => false).render,
+        ScoreView.Props(p.game.othello.score).render,
+        SettingsView.Props(p.settings, settings => p.handler(UpdateGameSettings(settings))).render
       )
     }
     def initialize(): Callback = $.props.map { p =>
@@ -138,6 +130,27 @@ object ScoreView {
   }
 
   val Component = ScalaComponent.builder[Props]("ScoreView")
+    .renderBackend[Backend]
+    .build
+}
+
+object SettingsView {
+
+  final case class Props(settings: GameSettings, updater: GameSettings => Callback) {
+    @inline def render: VdomElement = Component(this)
+  }
+
+  final class Backend($: BackendScope[Props, Unit]) {
+    def render(p: Props): VdomElement =
+      <.div(
+        <.button(
+          ^.onClick --> p.updater(p.settings.tglUseHint),
+          s"候補手表示: " + (if (p.settings.useHint) "On" else "Off")
+        )
+      )
+  }
+
+  val Component = ScalaComponent.builder[Props]("SettingsView")
     .renderBackend[Backend]
     .build
 }
