@@ -16,8 +16,8 @@ import othello.core.{Game, GameVersion, ParticipantId}
 import othello.service._
 
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object Server extends FailFastCirceSupport with codec.Codec {
   implicit val system: ActorSystem = ActorSystem()
@@ -86,6 +86,13 @@ object Server extends FailFastCirceSupport with codec.Codec {
                   r
                 case l@Left(_) => l
               })
+            }
+          }
+        },
+        path("games" / "pass") {
+          post {
+            entity(as[PassRequest]) { case PassRequest(gameId, participantId) =>
+              complete(service.pass(gameId, participantId))
             }
           }
         },

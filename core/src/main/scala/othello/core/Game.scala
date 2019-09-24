@@ -22,6 +22,16 @@ final case class Game(
       case (Playing, false) => Left(IsNotTurn)
       case _ => Left(NotPlaying)
     }
+  def pass(actorId: ParticipantId): Either[GameError, Game] =
+    (state, isTurnOf(actorId)) match {
+      case (Playing, true) =>
+        othello.pass match {
+          case Right(o) => Right(copy(othello = o, version = version.increment, nextIsOwner = !nextIsOwner))
+          case _ => Right(this) // TODO エラーをちゃんと伝搬する
+        }
+      case (Playing, false) => Left(IsNotTurn)
+      case _ => Left(NotPlaying)
+    }
   def isTurnOf(participantId: ParticipantId): Boolean =
     (isOwner(participantId) && nextIsOwner) || (isChallenger(participantId) && !nextIsOwner)
   def isOwner(participantId: ParticipantId): Boolean = participantId == ownerId

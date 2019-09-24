@@ -57,6 +57,12 @@ object GameComponent {
                 if (p.game.isTurnOf(p.participantId)) {
                   <.div(
                     "あなたの番です",
+                    if (othello.canNotPut) {
+                      <.button(
+                        ^.onClick --> p.handler(Pass(p.gameId, p.participantId)),
+                        "パス"
+                      )
+                    } else TagMod.empty,
                     <.button(
                       ^.onClick --> p.handler(GiveUp(p.gameId, p.participantId)),
                       "投了"

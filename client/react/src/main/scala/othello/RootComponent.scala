@@ -83,6 +83,21 @@ object RootComponent {
           }
           .toCallback
       }
+      case Pass(gameId, participantId) => bs.withProps { props =>
+        AsyncCallback.fromFuture(props.service.pass(gameId, participantId))
+          .flatMap {
+            case Right(game) =>
+              bs.modState(_.modAppState(_ =>
+                PlayingGame(
+                  participantId,
+                  gameId,
+                  game,
+                  props.eventSourceConnection)
+              )).asAsyncCallback
+            case _ => Callback.empty.asAsyncCallback
+          }
+          .toCallback
+      }
       case BackToEntrance(participantId) => act(LoadGames(participantId))
       case ReceiveEvent(currentParticipantId, event) =>
         event match {
@@ -96,11 +111,9 @@ object RootComponent {
               .fold(act(LoadGame(gameId, currentParticipantId))) { game =>
                 bs.putGame(game.giveUp)
               })
-          case Terminated(gameId, version) =>
-            bs.withGame(_.filter(_.canAcceptVersion(version))
-              .fold(act(LoadGame(gameId, currentParticipantId))) { _ =>
-                bs.withProps(p => Callback(p.eventSourceConnection.close))
-              })
+          case Terminated(_, _) =>
+            // FIXME versionのチェックができるか？(TerminatedされたGameはすでに削除されている可能性がある)
+            bs.withProps(p => Callback(p.eventSourceConnection.close))
           case GameStarted(_, _) =>
             bs.modState(_.modGame(_.start))
         }
