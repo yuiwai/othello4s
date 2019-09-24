@@ -13,6 +13,9 @@ trait Service[F[_]] {
   def putStone(gameId: GameId, participantId: ParticipantId, pos: Pos): F[Either[ServiceError, Game]]
   def pass(gameId: GameId, participantId: ParticipantId): F[Either[ServiceError, Game]]
   def giveUp(gameId: GameId, participantId: ParticipantId): F[Either[ServiceError, Game]]
+
+  // DEBUG
+  def createCustomGame(participantId: ParticipantId, board: Board): F[Option[GameId]]
 }
 
 final case class GameId(value: Int) extends AnyVal
@@ -77,6 +80,9 @@ final case class EntryRequest(gameId: GameId, participantId: ParticipantId)
 final case class PutStoneRequest(gameId: GameId, participantId: ParticipantId, pos: Pos)
 final case class PassRequest(gameId: GameId, participantId: ParticipantId)
 final case class GiveUpRequest(gameId: GameId, participantId: ParticipantId)
+
+// DEBUG
+final case class CreateCustomGameRequest(participantId: ParticipantId, board: Board)
 
 sealed trait GameEvent {
   val gameId: GameId

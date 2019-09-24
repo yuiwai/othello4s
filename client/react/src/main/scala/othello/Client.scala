@@ -2,7 +2,7 @@ package othello
 
 import org.scalajs.dom
 import org.scalajs.dom.raw.{EventSource, MessageEvent}
-import othello.core.{Game, ParticipantId, Pos}
+import othello.core.{Board, Game, ParticipantId, Pos}
 import othello.service.{GameEvent, GameId, GameSummary}
 
 object Client extends codec.Codec {
@@ -62,13 +62,18 @@ final case class PlayingGame(
 ) extends GameAppState {
   override def putGame(game: Game): GameAppState = copy(game = game)
 }
+final case class Edit(
+  participantId: ParticipantId
+) extends AuthenticatedAppState
 
 sealed trait Action
 case object Participate extends Action
 final case class LoadGames(participantId: ParticipantId) extends Action
 final case class LoadGame(gameId: GameId, participantId: ParticipantId) extends Action
 final case class CreateGame(participantId: ParticipantId) extends Action
+final case class CreateCustomGame(participantId: ParticipantId, board: Board) extends Action
 final case class EntryGame(gameId: GameId, participantId: ParticipantId) extends Action
+final case class BeginEditMode(participantId: ParticipantId) extends Action
 
 sealed trait GameAction extends Action
 final case class PutStone(gameId: GameId, participantId: ParticipantId, pos: Pos) extends GameAction

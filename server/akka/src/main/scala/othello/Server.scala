@@ -127,6 +127,23 @@ object Server extends FailFastCirceSupport with codec.Codec {
         },
         pathPrefix("public") {
           getFromResourceDirectory("public/")
+        },
+
+        // DEBUG
+        path("games" / "createCustom") {
+          post {
+            entity(as[CreateCustomGameRequest]) { case CreateCustomGameRequest(participantId, board) =>
+              complete {
+                service.createCustomGame(participantId, board)
+                  .map {
+                    case r@Some(gameId) =>
+                      createGameEventActor(gameId)
+                      r
+                    case _ => None
+                  }
+              }
+            }
+          }
         }
       )
     Http().bindAndHandle(route, "0.0.0.0", 8080)
