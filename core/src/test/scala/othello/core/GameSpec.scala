@@ -62,7 +62,7 @@ object GameSpec extends TestSuite {
       }
       test("terminated") {
         val terminatedGame = Game(
-          Othello(Map(Pos(1, 1) -> Black, Pos(1, 2) -> White), Black),
+          Othello(Board(Map(Pos(1, 1) -> Black, Pos(1, 2) -> White)), Black),
           Playing, ownerId, Some(challengerId), true, GameVersion.first)
           .putStone(ownerId, Pos(1, 3)).right.get
         terminatedGame.greaterColor ==> Some(Black)

@@ -1,7 +1,7 @@
 package othello.core
 
-final case class Othello(stones: Map[Pos, StoneColor], turn: StoneColor) {
-  def get(pos: Pos): Option[StoneColor] = stones.get(pos)
+final case class Othello(board: Board, turn: StoneColor) {
+  def get(pos: Pos): Option[StoneColor] = board.get(pos)
   def get(x: Int, y: Int): Option[StoneColor] = get(Pos(x, y))
   def gets(xs: => Seq[Pos]): Seq[StoneColor] = xs.map(get).collect { case Some(x) => x }
   def gets(xs: (Int, Int)*): Seq[StoneColor] = gets(xs.map(Pos.tupled))
@@ -25,9 +25,7 @@ final case class Othello(stones: Map[Pos, StoneColor], turn: StoneColor) {
   }
   def chains(origin: Pos): Set[Chain] = Directions.all.map(chain(origin, _)).collect { case Some(c) => c }
   def chains(x: Int, y: Int): Set[Chain] = chains(Pos(x, y))
-  def score: Map[StoneColor, Int] = stones.foldLeft[Map[StoneColor, Int]](Map(White -> 0, Black -> 0)) {
-    case (acc, (_, color)) => acc.updated(color, acc(color) + 1)
-  }
+  def score: Map[StoneColor, Int] = board.count
   def canNotPut: Boolean = canPutAll.isEmpty
   def canPutAll: Set[Arrangement] =
     (for {
@@ -37,10 +35,10 @@ final case class Othello(stones: Map[Pos, StoneColor], turn: StoneColor) {
     } yield Arrangement(x, y, turn)).toSet
   def isGameOver: Boolean = score.values.sum == 64 || (canNotPut && reverseTurn.canNotPut)
   private def mapStone(pos: Pos)(f: Option[StoneColor] => StoneColor): Othello =
-    copy(stones = stones.updated(pos, f(stones.get(pos))))
+    copy(board = board.put(pos, f(board.get(pos))))
   def put(pos: Pos, color: StoneColor): Either[OthelloError, Othello] = {
     if (pos.x < 1 || pos.x > 8 || pos.y < 1 || pos.y > 8) Left(OutOfBoard)
-    else if (stones.exists(_._1 == pos)) Left(StoneDuplication)
+    else if (board.exists(pos)) Left(StoneDuplication)
     else if (color != turn) Left(OthersTurn)
     else mapStone(pos) { _ => color }
       .applyReverse(pos)
@@ -57,12 +55,21 @@ final case class Othello(stones: Map[Pos, StoneColor], turn: StoneColor) {
 }
 
 object Othello {
-  def apply(): Othello = apply(Map(
+  def apply(): Othello = apply(Board(Map(
     Pos(4, 4) -> White,
     Pos(5, 4) -> Black,
     Pos(4, 5) -> Black,
     Pos(5, 5) -> White
-  ), Black)
+  )), Black)
+}
+
+final case class Board(value: Map[Pos, StoneColor]) extends AnyVal {
+  def get(pos: Pos): Option[StoneColor] = value.get(pos)
+  def exists(pos: Pos): Boolean = value.exists(_._1 == pos)
+  def count: Map[StoneColor, Int] = value.foldLeft[Map[StoneColor, Int]](Map(White -> 0, Black -> 0)) {
+    case (acc, (_, color)) => acc.updated(color, acc(color) + 1)
+  }
+  def put(pos: Pos, color: StoneColor): Board = Board(value.updated(pos, color))
 }
 
 final case class Pos(x: Int, y: Int) {

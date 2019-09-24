@@ -77,6 +77,7 @@ object GameVersion {
 sealed trait GameMode
 case object PlayerMode extends GameMode
 case object WatchingMode extends GameMode
+case object EditMode extends GameMode
 
 sealed trait GameState
 case object Waiting extends GameState
@@ -84,9 +85,6 @@ case object Prepared extends GameState
 case object Canceled extends GameState
 case object Playing extends GameState
 case class Terminated(participantId: Option[ParticipantId]) extends GameState
-
-trait GameOps
-trait Player
 
 sealed trait GameError
 case object NotWaiting extends GameError
