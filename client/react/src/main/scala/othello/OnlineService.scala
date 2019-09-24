@@ -70,6 +70,14 @@ class OnlineService extends Service[Future] with codec.Codec {
         decode[Either[ServiceError, Game]](r.responseText)
           .fold(_ => Left(DecodeError), identity)
       }
+
+  // DEBUG
+  override def createCustomGame(participantId: ParticipantId, board: Board): Future[Option[GameId]] =
+    post[Option[GameId]]("/games/createCustom", CreateCustomGameRequest(participantId, board).asJson)
+      .map {
+        case Left(_) => None
+        case Right(gameId) => gameId
+      }
 }
 
 /*

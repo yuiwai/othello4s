@@ -70,6 +70,14 @@ final case class Board(value: Map[Pos, StoneColor]) extends AnyVal {
     case (acc, (_, color)) => acc.updated(color, acc(color) + 1)
   }
   def put(pos: Pos, color: StoneColor): Board = Board(value.updated(pos, color))
+  def delete(pos: Pos): Board = Board(value - pos)
+  def mod(pos: Pos)(f: Option[StoneColor] => Option[StoneColor]): Board = f(value.get(pos)) match {
+    case Some(c) => put(pos, c)
+    case None => delete(pos)
+  }
+}
+object Board {
+  def apply(): Board = apply(Map.empty)
 }
 
 final case class Pos(x: Int, y: Int) {

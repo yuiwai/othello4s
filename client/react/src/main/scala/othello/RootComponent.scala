@@ -2,7 +2,8 @@ package othello
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import othello.core.{Game, ParticipantName}
+import othello.EditComponent.PutBlack
+import othello.core.{Board, Game, ParticipantName}
 import othello.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -123,7 +124,18 @@ object RootComponent {
           _ <- e.fold(_ => act(LoadGame(gameId, participantId)), game => bs.modState(_.modGame(_ => game))).asAsyncCallback
         } yield ()).toCallback
       }
+
+      // DEBUG
       case BeginEditMode(participantId) => bs.modState(_.modAppState(_ => Edit(participantId)))
+      case CreateCustomGame(participantId, board) =>
+        bs.withProps { p =>
+          AsyncCallback.fromFuture(p.service.createCustomGame(participantId, board))
+            .flatMap {
+              case Some(gameId) => act(LoadGame(gameId, participantId)).asAsyncCallback
+              case None => Callback.empty.asAsyncCallback
+            }
+            .toCallback
+        }
     }
     def render(p: Props, s: State): VdomElement =
       <.div(
@@ -133,7 +145,7 @@ object RootComponent {
           case Entrance(participantId, games) => EntranceComponent.Props(participantId, games, act).render
           case PlayingGame(participantId, gameId, game, eventSourceConnection) =>
             GameComponent.Props(participantId, gameId, game, eventSourceConnection, act).render
-          case Edit(participantId) => EditComponent.Props().render
+          case Edit(participantId) => EditComponent.Props(participantId, act).render
         }
       )
   }

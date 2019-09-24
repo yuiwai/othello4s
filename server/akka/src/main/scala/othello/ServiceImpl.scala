@@ -102,6 +102,15 @@ class ServiceImpl(gameRepository: GameRepository[Future], participantRepository:
         gameRepository.store(gameId, game).map(_ => Right(game))
       case other => Future.successful(other)
     }
+
+  // DEBUG
+  override def createCustomGame(participantId: ParticipantId, board: Board): Future[Option[GameId]] =
+    participantRepository
+      .find(participantId)
+      .flatMap { _ =>
+        val game = Game(participantId, board)
+        gameRepository.store(game)
+      }
 }
 
 class InMemoryGameRepository extends GameRepository[Future] {
