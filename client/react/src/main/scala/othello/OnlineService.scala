@@ -17,7 +17,7 @@ class OnlineService extends Service[Future] with codec.Codec {
     Ajax.post(url, json.noSpaces, headers = headers)
       .map[Either[io.circe.Error, R]](r => decode[R](r.responseText))
   override def participate(name: ParticipantName): Future[ParticipantId] =
-    post[ParticipantId]("/participants/create", ParticipateRequest(ParticipantName.noName).asJson)
+    post[ParticipantId]("/participants/create", ParticipateRequest(name).asJson)
       .map(_.getOrElse(ParticipantId(0)))
   override def allGames(participantId: ParticipantId): Future[Seq[GameSummary]] =
     Ajax
@@ -80,12 +80,17 @@ class OnlineService extends Service[Future] with codec.Codec {
       }
 }
 
-/*
 class OfflineService extends Service[Future] {
-  override def allGames: Future[Seq[GameId]] = ???
+  override def participate(name: ParticipantName): Future[ParticipantId] = ???
+  override def allGames(participantId: ParticipantId): Future[Seq[GameSummary]] = ???
   override def game(gameId: GameId): Future[Option[Game]] = ???
+  override def createGame(participantId: ParticipantId): Future[Either[ServiceError, GameSummary]] = ???
+  override def entry(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, EntryId]] = ???
+  override def putStone(gameId: GameId, participantId: ParticipantId, pos: Pos): Future[Either[ServiceError, Game]] = ???
+  override def pass(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, Game]] = ???
+  override def giveUp(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, Game]] = ???
+  override def createCustomGame(participantId: ParticipantId, board: Board): Future[Option[GameId]] = ???
 }
-*/
 
 /*
 class InMemoryGameRepository extends GameRepository {

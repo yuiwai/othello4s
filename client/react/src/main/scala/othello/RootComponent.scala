@@ -3,7 +3,7 @@ package othello
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import othello.GameComponent.GameSettings
-import othello.core.{Game, ParticipantName}
+import othello.core.Game
 import othello.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -12,10 +12,18 @@ import scala.concurrent.Future
 object RootComponent {
 
   final case class Props private(
-    service: Service[Future],
+    serviceSet: ServiceSet,
     eventSourceConnection: EventSourceConnection) {
     @inline def render: VdomElement = Component(this)
+    def service(networkMode: NetworkMode): Service[Future] = networkMode match {
+      case Online => serviceSet.onlineService
+      case Offline => serviceSet.offlineService
+    }
   }
+
+  sealed trait NetworkMode
+  case object Online extends NetworkMode
+  case object Offline extends NetworkMode
 
   final case class State(rootModel: RootModel) {
     def modRoot(f: RootModel => RootModel): State = copy(f(rootModel))
@@ -28,18 +36,19 @@ object RootComponent {
     }
     def modGameSettings(f: GameSettings => GameSettings): State =
       modGlobalState(gs => gs.copy(gameSettings = f(gs.gameSettings)))
+    def modNetworkMode(f: NetworkMode => NetworkMode): State = modGlobalState(gs => gs.copy(networkMode = f(gs.networkMode)))
   }
 
   object State {
-    def init: State = State(RootModel(GlobalState(GameSettings()), Initializing))
+    def init: State = State(RootModel(GlobalState(GameSettings(), Online), Initializing))
   }
 
   final class Backend(bs: BackendScope[Props, State]) {
     val act: Action => Callback = {
-      case Participate =>
+      case Participate(name) =>
         bs.withServiceAsync { service =>
           for {
-            participantId <- AsyncCallback.fromFuture(service.participate(ParticipantName.noName))
+            participantId <- AsyncCallback.fromFuture(service.participate(name))
             _ <- act(LoadGames(participantId)).asAsyncCallback
           } yield ()
         }.toCallback
@@ -146,7 +155,7 @@ object RootComponent {
     def render(p: Props, s: State): VdomElement =
       <.div(
         s.rootModel.appState match {
-          case Initializing => "Loading..."
+          case Initializing => TopComponent.Props(act).render
           case Loading(_) => "Loading..."
           case Entrance(participantId, games) => EntranceComponent.Props(participantId, games, act).render
           case PlayingGame(participantId, gameId, game, eventSourceConnection) =>
@@ -163,8 +172,10 @@ object RootComponent {
 
   implicit class BackendScopeWrap(bs: BackendScope[Props, State]) {
     def withProps(f: Props => Callback): Callback = bs.props.flatMap(f(_))
+    def withGlobalState(f: GlobalState => Callback): Callback = bs.state.map(_.rootModel.globalState) >>= f
     def withAppState(f: AppState => Callback): Callback = bs.state.map(_.rootModel.appState) >>= f
-    def withService(f: Service[Future] => Callback): Callback = bs.props.map(_.service) >>= f
+    def withService(f: Service[Future] => Callback): Callback =
+      bs.withGlobalState(_.networkMode).flatMap(n => bs.props.map(_.service)) >>= f
     def withServiceAsync[A](f: Service[Future] => AsyncCallback[A]): AsyncCallback[A] =
       bs.props.map(_.service).asAsyncCallback >>= f
     def modAppState(f: AppState => AppState): Callback = bs.modState(_.modAppState(f))
@@ -181,8 +192,6 @@ object RootComponent {
   val Component = ScalaComponent.builder[Props]("RootComponent")
     .initialState(State.init)
     .renderBackend[Backend]
-    .componentWillMount {
-      _.backend.act(Participate)
-    }
+    /*.componentWillMount { _.backend.act(Participate)} */
     .build
 }

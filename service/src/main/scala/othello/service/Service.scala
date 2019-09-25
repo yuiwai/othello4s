@@ -36,9 +36,16 @@ final case class GameSummary(
   challengerId: Option[ParticipantId],
   challengerName: Option[ParticipantName]
 ) {
+  def allParticipantIds: List[ParticipantId] = (Some(ownerId) :: challengerId :: Nil).flatten
   def isPlaying: Boolean = gameState == Playing
   def isParticipating(participantId: ParticipantId): Boolean =
     ownerId == participantId || challengerId.contains(participantId)
+  def resetParticipantNames(pm: Map[ParticipantId, Participant]): GameSummary = {
+    copy(
+      ownerName = pm.get(ownerId).map(_.name).getOrElse(ParticipantName.noName),
+      challengerName = challengerId.flatMap(id => pm.get(id).map(_.name))
+    )
+  }
 }
 
 sealed trait ServiceError

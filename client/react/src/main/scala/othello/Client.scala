@@ -3,18 +3,24 @@ package othello
 import org.scalajs.dom
 import org.scalajs.dom.raw.{EventSource, MessageEvent}
 import othello.GameComponent.GameSettings
-import othello.core.{Board, Game, ParticipantId, Pos}
-import othello.service.{GameEvent, GameId, GameSummary}
+import othello.RootComponent.NetworkMode
+import othello.core._
+import othello.service.{GameEvent, GameId, GameSummary, Service}
+
+import scala.concurrent.Future
 
 object Client extends codec.Codec {
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit = setup()
+  def setup(): Unit = {
     val root = RootComponent.Component(
       RootComponent.Props(
-        new OnlineService,
+        ServiceSet(new OnlineService, new OfflineService),
         EventSourceConnection("/events/")))
     root.renderIntoDOM(dom.document.getElementById("stage"))
   }
 }
+
+final case class ServiceSet(onlineService: Service[Future], offlineService: Service[Future])
 
 trait EventSourceConnection {
   val baseUrl: String
@@ -43,7 +49,7 @@ object EventSourceConnection {
 
 final case class RootModel(globalState: GlobalState, appState: AppState)
 
-final case class GlobalState(gameSettings: GameSettings)
+final case class GlobalState(gameSettings: GameSettings, networkMode: NetworkMode)
 
 sealed trait AppState
 case object Initializing extends AppState
@@ -70,7 +76,7 @@ final case class Edit(
 ) extends AuthenticatedAppState
 
 sealed trait Action
-case object Participate extends Action
+final case class Participate(name: ParticipantName) extends Action
 final case class LoadGames(participantId: ParticipantId) extends Action
 final case class LoadGame(gameId: GameId, participantId: ParticipantId) extends Action
 final case class CreateGame(participantId: ParticipantId) extends Action

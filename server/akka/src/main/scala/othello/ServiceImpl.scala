@@ -14,12 +14,13 @@ class ServiceImpl(gameRepository: GameRepository[Future], participantRepository:
   override def allGames(participantId: ParticipantId): Future[Seq[GameSummary]] =
     for {
       p <- participantRepository.find(participantId)
-      g <- gameRepository.all.map(games => games.map {
+      gs <- gameRepository.all.map(games => games.map {
         case (gameId, game) =>
           // FIXME 暫定でnoName
           GameSummary(gameId, game.state, game.ownerId, ParticipantName.noName, game.challengerId, Some(ParticipantName.noName))
       })
-    } yield p.fold(Seq.empty[GameSummary])(_ => g)
+      pm <- participantRepository.findByIds(gs.flatMap(_.allParticipantIds))
+    } yield p.fold(Seq.empty[GameSummary])(_ => gs.map(_.resetParticipantNames(pm)))
   override def game(gameId: GameId): Future[Option[Game]] = gameRepository.find(gameId)
   override def createGame(participantId: ParticipantId): Future[Either[ServiceError, GameSummary]] =
     (for {
