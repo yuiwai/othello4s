@@ -2,6 +2,7 @@ package othello
 
 import org.scalajs.dom
 import org.scalajs.dom.raw.{EventSource, MessageEvent}
+import othello.GameComponent.GameSettings
 import othello.core.{Board, Game, ParticipantId, Pos}
 import othello.service.{GameEvent, GameId, GameSummary}
 
@@ -40,7 +41,9 @@ object EventSourceConnection {
   }
 }
 
-final case class RootModel(appState: AppState)
+final case class RootModel(globalState: GlobalState, appState: AppState)
+
+final case class GlobalState(gameSettings: GameSettings)
 
 sealed trait AppState
 case object Initializing extends AppState
@@ -81,3 +84,4 @@ final case class Pass(gameId: GameId, participantId: ParticipantId) extends Game
 final case class GiveUp(gameId: GameId, participantId: ParticipantId) extends GameAction
 final case class ReceiveEvent(participantId: ParticipantId, event: GameEvent) extends GameAction
 final case class BackToEntrance(participantId: ParticipantId) extends GameAction
+final case class UpdateGameSettings(settings: GameSettings) extends GameAction

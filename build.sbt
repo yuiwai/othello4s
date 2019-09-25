@@ -99,7 +99,9 @@ lazy val reactClient =
       scalaJSUseMainModuleInitializer := true,
       libraryDependencies ++= Seq(
         "com.github.japgolly.scalajs-react" %%% "core" % "1.4.2",
-        "org.scala-js" %%% "scalajs-dom" % "0.9.7"
+        "org.scala-js" %%% "scalajs-dom" % "0.9.7",
+        "com.github.japgolly.scalacss" %%% "core" % "0.5.3",
+        "com.github.japgolly.scalacss" %%% "ext-react" % "0.5.3"
       ),
       npmDependencies in Compile ++= Seq(
         "react" -> "16.7.0",
