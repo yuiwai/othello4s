@@ -53,20 +53,22 @@ object RootComponent {
           } yield ()
         }.toCallback
       case LoadGame(gameId, participantId) =>
-        bs.withProps { props =>
-          AsyncCallback.fromFuture(props.service.game(gameId))
-            .flatMap {
-              case Some(game) =>
-                bs.modState(_.modAppState(_ =>
-                  PlayingGame(
-                    participantId,
-                    gameId,
-                    game,
-                    props.eventSourceConnection)
-                )).asAsyncCallback
-              case _ => act(LoadGames(participantId)).asAsyncCallback
-            }
-            .toCallback
+        bs.withService { service =>
+          bs.withProps { props =>
+            AsyncCallback.fromFuture(service.game(gameId))
+              .flatMap {
+                case Some(game) =>
+                  bs.modState(_.modAppState(_ =>
+                    PlayingGame(
+                      participantId,
+                      gameId,
+                      game,
+                      props.eventSourceConnection)
+                  )).asAsyncCallback
+                case _ => act(LoadGames(participantId)).asAsyncCallback
+              }
+              .toCallback
+          }
         }
       case LoadGames(participantId) =>
         bs.withService { service =>
@@ -74,15 +76,17 @@ object RootComponent {
             .flatMap(games => bs.modAppState(_ => Entrance(participantId, games)).asAsyncCallback)
             .toCallback
         }
-      case CreateGame(participantId) => bs.props.flatMap(p =>
-        AsyncCallback
-          .fromFuture(p.service.createGame(participantId))
-          .flatMap {
-            case Right(gameSummary) =>
-              act(LoadGame(gameSummary.gameId, participantId)).asAsyncCallback
-            case _ =>
-              act(LoadGames(participantId)).asAsyncCallback
-          }.toCallback)
+      case CreateGame(participantId) => bs.withService { service =>
+        bs.props.flatMap(p =>
+          AsyncCallback
+            .fromFuture(service.createGame(participantId))
+            .flatMap {
+              case Right(gameSummary) =>
+                act(LoadGame(gameSummary.gameId, participantId)).asAsyncCallback
+              case _ =>
+                act(LoadGames(participantId)).asAsyncCallback
+            }.toCallback)
+      }
       case EntryGame(gameId, participantId) => bs.withService { service =>
         (AsyncCallback.fromFuture(service.entry(gameId, participantId))
           >> act(LoadGame(gameId, participantId)).asAsyncCallback).toCallback
@@ -96,20 +100,23 @@ object RootComponent {
           }
           .toCallback
       }
-      case Pass(gameId, participantId) => bs.withProps { props =>
-        AsyncCallback.fromFuture(props.service.pass(gameId, participantId))
-          .flatMap {
-            case Right(game) =>
-              bs.modState(_.modAppState(_ =>
-                PlayingGame(
-                  participantId,
-                  gameId,
-                  game,
-                  props.eventSourceConnection)
-              )).asAsyncCallback
-            case _ => Callback.empty.asAsyncCallback
-          }
-          .toCallback
+      case Pass(gameId, participantId) => bs.withService { service =>
+        bs.withProps { props =>
+          AsyncCallback.fromFuture(service.pass(gameId, participantId))
+            .flatMap {
+              case Right(game) =>
+                bs.modState(_.modAppState(_ =>
+                  PlayingGame(
+                    participantId,
+                    gameId,
+                    game,
+                    props.eventSourceConnection)
+                )).asAsyncCallback
+              case _ => Callback.empty.asAsyncCallback
+            }
+
+            .toCallback
+        }
       }
       case BackToEntrance(participantId) => act(LoadGames(participantId))
       case ReceiveEvent(currentParticipantId, event) =>
@@ -143,8 +150,8 @@ object RootComponent {
       // DEBUG
       case BeginEditMode(participantId) => bs.modState(_.modAppState(_ => Edit(participantId)))
       case CreateCustomGame(participantId, board) =>
-        bs.withProps { p =>
-          AsyncCallback.fromFuture(p.service.createCustomGame(participantId, board))
+        bs.withService { service =>
+          AsyncCallback.fromFuture(service.createCustomGame(participantId, board))
             .flatMap {
               case Some(gameId) => act(LoadGame(gameId, participantId)).asAsyncCallback
               case None => Callback.empty.asAsyncCallback
@@ -173,11 +180,13 @@ object RootComponent {
   implicit class BackendScopeWrap(bs: BackendScope[Props, State]) {
     def withProps(f: Props => Callback): Callback = bs.props.flatMap(f(_))
     def withGlobalState(f: GlobalState => Callback): Callback = bs.state.map(_.rootModel.globalState) >>= f
+    def withGlobalStateAsync[A](f: GlobalState => AsyncCallback[A]): AsyncCallback[A] =
+      bs.state.map(_.rootModel.globalState).asAsyncCallback >>= f
     def withAppState(f: AppState => Callback): Callback = bs.state.map(_.rootModel.appState) >>= f
     def withService(f: Service[Future] => Callback): Callback =
-      bs.withGlobalState(_.networkMode).flatMap(n => bs.props.map(_.service)) >>= f
+      bs.withGlobalState(gs => bs.props.map(_.service(gs.networkMode)) >>= f)
     def withServiceAsync[A](f: Service[Future] => AsyncCallback[A]): AsyncCallback[A] =
-      bs.props.map(_.service).asAsyncCallback >>= f
+      bs.withGlobalStateAsync(gs => bs.props.map(_.service(gs.networkMode)).asAsyncCallback >>= f)
     def modAppState(f: AppState => AppState): Callback = bs.modState(_.modAppState(f))
     def withGame(f: Option[Game] => Callback): Callback = bs.state.flatMap(_.rootModel.appState match {
       case gas: GameAppState => f(Some(gas.game))
