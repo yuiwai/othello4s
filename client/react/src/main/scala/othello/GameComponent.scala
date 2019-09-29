@@ -77,7 +77,10 @@ object GameComponent {
         },
         BoardComponent.Props(p.game.othello.board, { pos =>
           p.game.mode(p.participantId) match {
-            case PlayerMode => p.handler(PutStone(p.gameId, p.participantId, pos))
+            case PlayerMode =>
+              if (p.game.putStone(p.participantId, pos).isRight)
+                p.handler(PutStone(p.gameId, p.participantId, pos))
+              else Callback.empty
             case _ => Callback.empty
           }
         }, if (p.settings.useHint) p.game.othello.canPutAll.map(arr => arr.pos) else _ => false).render,

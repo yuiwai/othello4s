@@ -209,6 +209,5 @@ object RootComponent {
   val Component = ScalaComponent.builder[Props]("RootComponent")
     .initialState(State.init)
     .renderBackend[Backend]
-    /*.componentWillMount { _.backend.act(Participate)} */
     .build
 }
