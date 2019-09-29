@@ -66,7 +66,7 @@ object Game {
   def apply(ownerId: ParticipantId): Game = apply(Othello(), Waiting, ownerId, None, nextIsOwner = true, GameVersion.first)
   def apply(ownerId: ParticipantId, board: Board): Game =
     apply(Othello(board, Black), Waiting, ownerId, None, nextIsOwner = true, GameVersion.first)
-  def singlePlay: Game = apply(Othello(), Playing, ParticipantId(0), Some(ParticipantId(0)), nextIsOwner = true, GameVersion.first)
+  def singlePlay: Game = apply(Othello(), Playing, ParticipantId(-1), Some(ParticipantId(-2)), nextIsOwner = true, GameVersion.first)
 }
 
 final case class GameVersion(value: Int) extends AnyVal {
