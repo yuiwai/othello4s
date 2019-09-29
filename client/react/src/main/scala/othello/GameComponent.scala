@@ -60,12 +60,15 @@ object GameComponent {
             <.div("参加者を待っています...")
           case Playing =>
             p.game.mode(p.participantId) match {
-              case WatchingMode => <.div("観戦中です")
+              case WatchingMode => <.div(
+                "観戦中です",
+                backToEntranceButton(p)
+              )
               case PlayerMode =>
                 PlayingMenuBar.render(
                   p.game,
                   p.participantId,
-                  () =>p.handler(Pass(p.gameId, p.participantId)),
+                  () => p.handler(Pass(p.gameId, p.participantId)),
                   () => p.handler(GiveUp(p.gameId, p.participantId)),
                   backToEntranceButton(p)
                 )
@@ -150,26 +153,26 @@ object PlayingMenuBar {
     giveUpHandler: () => Callback,
     watchingModeView: => VdomNode
   ): VdomElement =
-  if (game.isTurnOf(playerId)) {
-    <.div(
-      "あなたの番です",
-      if (game.othello.canNotPut) {
+    if (game.isTurnOf(playerId)) {
+      <.div(
+        "あなたの番です",
+        if (game.othello.canNotPut) {
+          <.button(
+            ^.onClick --> passHandler(),
+            "パス"
+          )
+        } else TagMod.empty,
         <.button(
-          ^.onClick --> passHandler(),
-          "パス"
+          ^.onClick --> giveUpHandler(),
+          "投了"
         )
-      } else TagMod.empty,
-      <.button(
-        ^.onClick --> giveUpHandler(),
-        "投了"
       )
-    )
-  } else {
-    <.div(
-      "相手の番です...",
-      withIfWatchingMode(game, playerId)(watchingModeView)
-    )
-  }
+    } else {
+      <.div(
+        "相手の番です...",
+        withIfWatchingMode(game, playerId)(watchingModeView)
+      )
+    }
   def withIfWatchingMode(game: Game, playerId: ParticipantId)(vdomNode: => VdomNode): VdomNode = {
     if (game.mode(playerId) == WatchingMode) vdomNode
     else EmptyVdom

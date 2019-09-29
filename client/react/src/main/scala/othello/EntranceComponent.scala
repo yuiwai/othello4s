@@ -54,8 +54,14 @@ object EntranceComponent {
           <.button(
             ^.onClick --> p.handler(BeginEditMode(p.participantId)),
             "【デバッグ】エディットモードを起動"
-          )
+          ),
+          reloadButton(p)
         )
+      )
+    def reloadButton(p: Props): VdomNode =
+      <.button(
+        ^.onClick --> p.handler(LoadGames(p.participantId)),
+        "再読み込み"
       )
   }
 
