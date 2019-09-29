@@ -3,6 +3,7 @@ import sbtcrossproject.CrossPlugin.autoImport.{crossProject, CrossType}
 version in ThisBuild := "0.1"
 scalaVersion in ThisBuild := "2.12.8"
 val circeVersion = "0.11.1"
+val monocleVersion = "2.0.0"
 
 lazy val core =
   crossProject(JSPlatform, JVMPlatform)
@@ -101,7 +102,9 @@ lazy val reactClient =
         "com.github.japgolly.scalajs-react" %%% "core" % "1.4.2",
         "org.scala-js" %%% "scalajs-dom" % "0.9.7",
         "com.github.japgolly.scalacss" %%% "core" % "0.5.3",
-        "com.github.japgolly.scalacss" %%% "ext-react" % "0.5.3"
+        "com.github.japgolly.scalacss" %%% "ext-react" % "0.5.3",
+        "com.github.julien-truffaut" %%% "monocle-core" % monocleVersion,
+        "com.github.julien-truffaut" %%% "monocle-macro" % monocleVersion
       ),
       npmDependencies in Compile ++= Seq(
         "react" -> "16.7.0",

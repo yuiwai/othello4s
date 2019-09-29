@@ -60,28 +60,18 @@ object GameComponent {
             <.div("参加者を待っています...")
           case Playing =>
             p.game.mode(p.participantId) match {
-              case WatchingMode => <.div("観戦中です")
+              case WatchingMode => <.div(
+                "観戦中です",
+                backToEntranceButton(p)
+              )
               case PlayerMode =>
-                if (p.game.isTurnOf(p.participantId)) {
-                  <.div(
-                    "あなたの番です",
-                    if (othello.canNotPut) {
-                      <.button(
-                        ^.onClick --> p.handler(Pass(p.gameId, p.participantId)),
-                        "パス"
-                      )
-                    } else TagMod.empty,
-                    <.button(
-                      ^.onClick --> p.handler(GiveUp(p.gameId, p.participantId)),
-                      "投了"
-                    )
-                  )
-                } else {
-                  <.div(
-                    "相手の番です...",
-                    withIfWatchingMode(p)(backToEntranceButton(p))
-                  )
-                }
+                PlayingMenuBar.render(
+                  p.game,
+                  p.participantId,
+                  () => p.handler(Pass(p.gameId, p.participantId)),
+                  () => p.handler(GiveUp(p.gameId, p.participantId)),
+                  backToEntranceButton(p)
+                )
             }
           case _ => TagMod.empty
         },
@@ -153,4 +143,38 @@ object SettingsView {
   val Component = ScalaComponent.builder[Props]("SettingsView")
     .renderBackend[Backend]
     .build
+}
+
+object PlayingMenuBar {
+  def render(
+    game: Game,
+    playerId: ParticipantId,
+    passHandler: () => Callback,
+    giveUpHandler: () => Callback,
+    watchingModeView: => VdomNode
+  ): VdomElement =
+    if (game.isTurnOf(playerId)) {
+      <.div(
+        "あなたの番です",
+        if (game.othello.canNotPut) {
+          <.button(
+            ^.onClick --> passHandler(),
+            "パス"
+          )
+        } else TagMod.empty,
+        <.button(
+          ^.onClick --> giveUpHandler(),
+          "投了"
+        )
+      )
+    } else {
+      <.div(
+        "相手の番です...",
+        withIfWatchingMode(game, playerId)(watchingModeView)
+      )
+    }
+  def withIfWatchingMode(game: Game, playerId: ParticipantId)(vdomNode: => VdomNode): VdomNode = {
+    if (game.mode(playerId) == WatchingMode) vdomNode
+    else EmptyVdom
+  }
 }
