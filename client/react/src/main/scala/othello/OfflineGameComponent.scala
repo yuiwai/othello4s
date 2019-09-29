@@ -85,7 +85,14 @@ object OfflineGameComponent {
             )
           case _: AIPlayMode =>
             <.div(
-              "AIと対戦中..."
+              "AIと対戦中...",
+              PlayingMenuBar.render(
+                s.game,
+                s.game.ownerId,
+                () => $.setState(s.copy(game = s.game.pass(s.game.ownerId).fold(_ => s.game, identity))),
+                () => Callback.empty,
+                EmptyVdom
+              )
             )
         },
         BoardComponent.Props(s.game.othello.board, s.mode.boardClickHandle).render,
