@@ -45,6 +45,8 @@ object RootComponent {
 
   final class Backend(bs: BackendScope[Props, State]) {
     val act: Action => Callback = {
+      case CompositeAction(first, second) => (act(first).async >> act(second).async).toCallback
+      case Initialize => bs.modAppState(_ => Initializing)
       case Participate(name) =>
         bs.withServiceAsync { service =>
           for {
@@ -147,6 +149,11 @@ object RootComponent {
       case UpdateGameSettings(settings) =>
         bs.modState(_.modGameSettings(_ => settings))
 
+      case StartOnlineMode =>
+        bs.modState(_.modGlobalState(_.toOnline))
+      case StartOfflineMode =>
+        bs.modState(_.modAppState(_ => OfflineGame()).modGlobalState(_.toOffline))
+
       // DEBUG
       case BeginEditMode(participantId) => bs.modState(_.modAppState(_ => Edit(participantId)))
       case CreateCustomGame(participantId, board) =>
@@ -173,6 +180,7 @@ object RootComponent {
               s.rootModel.globalState.gameSettings,
               eventSourceConnection, act).render
           case Edit(participantId) => EditComponent.Props(participantId, act).render
+          case OfflineGame() => OfflineGameComponent.Props(act).render
         }
       )
   }

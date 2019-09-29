@@ -3,7 +3,7 @@ package othello
 import org.scalajs.dom
 import org.scalajs.dom.raw.{EventSource, MessageEvent}
 import othello.GameComponent.GameSettings
-import othello.RootComponent.NetworkMode
+import othello.RootComponent.{NetworkMode, Offline, Online}
 import othello.core._
 import othello.service.{GameEvent, GameId, GameSummary, Service}
 
@@ -49,7 +49,10 @@ object EventSourceConnection {
 
 final case class RootModel(globalState: GlobalState, appState: AppState)
 
-final case class GlobalState(gameSettings: GameSettings, networkMode: NetworkMode)
+final case class GlobalState(gameSettings: GameSettings, networkMode: NetworkMode) {
+  def toOnline: GlobalState = copy(networkMode = Online)
+  def toOffline: GlobalState = copy(networkMode = Offline)
+}
 
 sealed trait AppState
 case object Initializing extends AppState
@@ -74,8 +77,13 @@ final case class PlayingGame(
 final case class Edit(
   participantId: ParticipantId
 ) extends AuthenticatedAppState
+final case class OfflineGame() extends AppState
 
-sealed trait Action
+sealed trait Action {
+  def >>(action: Action): CompositeAction = CompositeAction(this, action)
+}
+
+case object Initialize extends Action
 final case class Participate(name: ParticipantName) extends Action
 final case class LoadGames(participantId: ParticipantId) extends Action
 final case class LoadGame(gameId: GameId, participantId: ParticipantId) extends Action
@@ -83,6 +91,9 @@ final case class CreateGame(participantId: ParticipantId) extends Action
 final case class CreateCustomGame(participantId: ParticipantId, board: Board) extends Action
 final case class EntryGame(gameId: GameId, participantId: ParticipantId) extends Action
 final case class BeginEditMode(participantId: ParticipantId) extends Action
+case object StartOnlineMode extends Action
+case object StartOfflineMode extends Action
+final case class CompositeAction(first: Action, second: Action) extends Action
 
 sealed trait GameAction extends Action
 final case class PutStone(gameId: GameId, participantId: ParticipantId, pos: Pos) extends GameAction

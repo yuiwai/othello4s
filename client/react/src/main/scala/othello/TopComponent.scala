@@ -27,12 +27,13 @@ object TopComponent {
           ),
           <.button(
             ^.disabled := s.name.isEmpty,
-            ^.onClick --> p.handler(Participate(ParticipantName(s.name))),
+            ^.onClick --> p.handler(StartOnlineMode >> Participate(ParticipantName(s.name))),
             "オンラインモード"
           )
         ),
         <.div(
           <.button(
+            ^.onClick --> p.handler(StartOfflineMode),
             "オフラインモード"
           )
         )
