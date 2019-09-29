@@ -86,12 +86,15 @@ object OfflineGameComponent {
           case _: AIPlayMode =>
             <.div(
               "AIと対戦中...",
-              PlayingMenuBar.render(
+              GameInformationBar.render(
                 s.game,
                 s.game.ownerId,
                 () => $.setState(s.copy(game = s.game.pass(s.game.ownerId).fold(_ => s.game, identity))),
                 () => Callback.empty,
-                EmptyVdom
+                <.button(
+                  ^.onClick --> $.setState(s.copy(game = Game.singlePlay)),
+                  "再戦する"
+                )
               )
             )
         },

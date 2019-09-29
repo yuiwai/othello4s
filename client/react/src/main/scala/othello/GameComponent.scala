@@ -36,45 +36,14 @@ object GameComponent {
       else EmptyVdom
     }
     def render(p: Props): VdomElement = {
-      import p.game.othello
       <.div(
-        p.game.state match {
-          case Terminated(winner) =>
-            p.game.mode(p.participantId) match {
-              case WatchingMode =>
-                <.div(
-                  "ゲーム終了",
-                  backToEntranceButton(p)
-                )
-              case PlayerMode =>
-                <.div(
-                  winner match {
-                    case Some(p.participantId) => "あなたの勝ちです!"
-                    case None => "引き分けです"
-                    case _ => "あなたの負けです..."
-                  },
-                  backToEntranceButton(p)
-                )
-            }
-          case Waiting =>
-            <.div("参加者を待っています...")
-          case Playing =>
-            p.game.mode(p.participantId) match {
-              case WatchingMode => <.div(
-                "観戦中です",
-                backToEntranceButton(p)
-              )
-              case PlayerMode =>
-                PlayingMenuBar.render(
-                  p.game,
-                  p.participantId,
-                  () => p.handler(Pass(p.gameId, p.participantId)),
-                  () => p.handler(GiveUp(p.gameId, p.participantId)),
-                  backToEntranceButton(p)
-                )
-            }
-          case _ => TagMod.empty
-        },
+        GameInformationBar.render(
+          p.game,
+          p.participantId,
+          () => p.handler(Pass(p.gameId, p.participantId)),
+          () => p.handler(GiveUp(p.gameId, p.participantId)),
+          backToEntranceButton(p)
+        ),
         BoardComponent.Props(p.game.othello.board, { pos =>
           p.game.mode(p.participantId) match {
             case PlayerMode =>
@@ -146,6 +115,52 @@ object SettingsView {
   val Component = ScalaComponent.builder[Props]("SettingsView")
     .renderBackend[Backend]
     .build
+}
+
+object GameInformationBar {
+  def render(
+    game: Game,
+    participantId: ParticipantId,
+    passHandler: () => Callback,
+    giveUpHandler: () => Callback,
+    exitView: => VdomNode): TagMod =
+    game.state match {
+      case Terminated(winner) =>
+        game.mode(participantId) match {
+          case WatchingMode =>
+            <.div(
+              "ゲーム終了",
+              exitView
+            )
+          case PlayerMode =>
+            <.div(
+              winner match {
+                case Some(`participantId`) => "あなたの勝ちです!"
+                case None => "引き分けです"
+                case _ => "あなたの負けです..."
+              },
+              exitView
+            )
+        }
+      case Waiting =>
+        <.div("参加者を待っています...")
+      case Playing =>
+        game.mode(participantId) match {
+          case WatchingMode => <.div(
+            "観戦中です",
+            exitView
+          )
+          case PlayerMode =>
+            PlayingMenuBar.render(
+              game,
+              participantId,
+              passHandler,
+              giveUpHandler,
+              exitView
+            )
+        }
+      case _ => TagMod.empty
+    }
 }
 
 object PlayingMenuBar {
