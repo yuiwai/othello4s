@@ -24,6 +24,14 @@ object GameSpec extends TestSuite {
         startedGame.entry(challengerId) ==> Left(NotWaiting)
       }
     }
+    test("cancel") {
+      test("valid") {
+        waitingGame.cancel.get.state ==> Canceled
+      }
+      test("not waiting") {
+        startedGame.cancel ==> None
+      }
+    }
     test("start") {
       test("valid") {
         // TODO

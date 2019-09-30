@@ -91,6 +91,7 @@ object OfflineGameComponent {
                 s.game.ownerId,
                 () => $.setState(s.copy(game = s.game.pass(s.game.ownerId).fold(_ => s.game, identity))),
                 () => $.setState(s.copy(game = s.game.giveUp)),
+                () => Callback.empty,
                 <.button(
                   ^.onClick --> $.setState(s.copy(game = Game.singlePlay)),
                   "再戦する"

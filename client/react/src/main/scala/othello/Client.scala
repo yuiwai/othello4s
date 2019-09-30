@@ -96,6 +96,7 @@ case object StartOfflineMode extends Action
 final case class CompositeAction(first: Action, second: Action) extends Action
 
 sealed trait GameAction extends Action
+final case class CancelGame(gameId: GameId, participantId: ParticipantId) extends GameAction
 final case class PutStone(gameId: GameId, participantId: ParticipantId, pos: Pos) extends GameAction
 final case class Pass(gameId: GameId, participantId: ParticipantId) extends GameAction
 final case class GiveUp(gameId: GameId, participantId: ParticipantId) extends GameAction

@@ -9,6 +9,7 @@ trait Service[F[_]] {
   def allGames(participantId: ParticipantId): F[Seq[GameSummary]]
   def game(gameId: GameId): F[Option[Game]]
   def createGame(participantId: ParticipantId): F[Either[ServiceError, GameSummary]]
+  def cancel(gameId: GameId, participantId: ParticipantId): F[Option[ServiceError]]
   def entry(gameId: GameId, participantId: ParticipantId): F[Either[ServiceError, EntryId]]
   def putStone(gameId: GameId, participantId: ParticipantId, pos: Pos): F[Either[ServiceError, Game]]
   def pass(gameId: GameId, participantId: ParticipantId): F[Either[ServiceError, Game]]
@@ -83,6 +84,7 @@ trait Entry {
 }
 
 final case class ParticipateRequest(name: ParticipantName)
+final case class CancelGameRequest(gameId: GameId, participantId: ParticipantId)
 final case class EntryRequest(gameId: GameId, participantId: ParticipantId)
 final case class PutStoneRequest(gameId: GameId, participantId: ParticipantId, pos: Pos)
 final case class PassRequest(gameId: GameId, participantId: ParticipantId)

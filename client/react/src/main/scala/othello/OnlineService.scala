@@ -32,10 +32,13 @@ class OnlineService extends Service[Future] with codec.Codec {
   override def createGame(participantId: ParticipantId): Future[Either[ServiceError, GameSummary]] =
     post[WithServiceError[GameSummary]]("/games/create", participantId.asJson)
       .map(_.fold[Either[ServiceError, GameSummary]](_ => Left(DecodeError), identity))
-  def entry(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, EntryId]] =
+  override def cancel(gameId: GameId, participantId: ParticipantId): Future[Option[ServiceError]] =
+    post[Option[ServiceError]]("/games/cancel", CancelGameRequest(gameId, participantId).asJson)
+      .map(_.fold(_ => Some(DecodeError), identity))
+  override def entry(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, EntryId]] =
     post[WithServiceError[EntryId]]("/games/entry", EntryRequest(gameId, participantId).asJson)
       .map(_.fold(_ => Left(DecodeError), identity))
-  def putStone(gameId: GameId, participantId: ParticipantId, pos: Pos): Future[Either[ServiceError, Game]] =
+  override def putStone(gameId: GameId, participantId: ParticipantId, pos: Pos): Future[Either[ServiceError, Game]] =
     post[WithServiceError[Game]]("/games/putStone", PutStoneRequest(gameId, participantId, pos).asJson)
       .map(_.fold(_ => Left(DecodeError), identity))
   override def pass(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, Game]] =
@@ -59,6 +62,7 @@ class OfflineService extends Service[Future] {
   override def allGames(participantId: ParticipantId): Future[Seq[GameSummary]] = ???
   override def game(gameId: GameId): Future[Option[Game]] = ???
   override def createGame(participantId: ParticipantId): Future[Either[ServiceError, GameSummary]] = ???
+  override def cancel(gameId: GameId, participantId: ParticipantId): Future[Option[ServiceError]] = ???
   override def entry(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, EntryId]] = ???
   override def putStone(gameId: GameId, participantId: ParticipantId, pos: Pos): Future[Either[ServiceError, Game]] = ???
   override def pass(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, Game]] = ???

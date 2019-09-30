@@ -42,6 +42,7 @@ object GameComponent {
           p.participantId,
           () => p.handler(Pass(p.gameId, p.participantId)),
           () => p.handler(GiveUp(p.gameId, p.participantId)),
+          () => p.handler(CancelGame(p.gameId, p.participantId)),
           backToEntranceButton(p)
         ),
         BoardComponent.Props(p.game.othello.board, { pos =>
@@ -123,6 +124,7 @@ object GameInformationBar {
     participantId: ParticipantId,
     passHandler: () => Callback,
     giveUpHandler: () => Callback,
+    cancelHandler: () => Callback,
     exitView: => VdomNode): TagMod =
     game.state match {
       case Terminated(winner) =>
@@ -143,7 +145,13 @@ object GameInformationBar {
             )
         }
       case Waiting =>
-        <.div("参加者を待っています...")
+        <.div(
+          "参加者を待っています...",
+          <.button(
+            ^.onClick --> cancelHandler(),
+            "Cancel"
+          ),
+        )
       case Playing =>
         game.mode(participantId) match {
           case WatchingMode => <.div(
