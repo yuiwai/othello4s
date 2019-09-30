@@ -57,6 +57,10 @@ object EntranceComponent {
             ^.onClick --> p.handler(BeginEditMode(p.participantId)),
             "【デバッグ】エディットモードを起動"
           ),
+          <.button(
+            ^.onClick --> p.handler(Initialize),
+            "トップに戻る"
+          ),
           reloadButton(p)
         )
       )
