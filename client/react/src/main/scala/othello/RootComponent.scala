@@ -3,7 +3,7 @@ package othello
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import othello.GameComponent.GameSettings
-import othello.core.Game
+import othello.core.{Game, ParticipantId}
 import othello.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -88,6 +88,11 @@ object RootComponent {
               case _ =>
                 act(LoadGames(participantId)).asAsyncCallback
             }.toCallback)
+      }
+      case CancelGame(gameId: GameId, participantId: ParticipantId) => bs.withService { service =>
+        (AsyncCallback
+          .fromFuture(service.cancel(gameId, participantId)) >>
+          act(LoadGames(participantId)).async).toCallback
       }
       case EntryGame(gameId, participantId) => bs.withService { service =>
         (AsyncCallback.fromFuture(service.entry(gameId, participantId))

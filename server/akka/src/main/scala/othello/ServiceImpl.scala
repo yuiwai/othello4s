@@ -30,12 +30,22 @@ class ServiceImpl(gameRepository: GameRepository[Future], participantRepository:
       g <- gameRepository
         .store(Game(participantId))
         .map {
-          // FIXME 暫定でnoName
-          case Some(id) => Right(GameSummary(id, Waiting, participantId, ParticipantName.noName, None, None))
+          case Some(id) => Right(
+            GameSummary(id, Waiting, participantId, p.map(_.name).getOrElse(ParticipantName.noName), None, None)
+          )
           case None => Left(GameStoreFailed)
         }
     } yield p.fold[Either[ServiceError, GameSummary]](Left(ParticipantNotFound))(_ => g)) recover {
       case _: NoSuchElementException => Left(OwnedGameExists)
+    }
+  override def cancel(gameId: GameId, participantId: ParticipantId): Future[Option[ServiceError]] =
+    (for {
+      p <- participantRepository.find(participantId)
+      o <- gameRepository.ownedBy(participantId) if o.nonEmpty
+      g <- gameRepository.find(gameId) if g.nonEmpty
+      _ <- gameRepository.store(gameId, g.get.cancel.getOrElse(g.get))
+    } yield p.fold[Option[ServiceError]](Some(ParticipantNotFound))(_ => None)) recover {
+      case _: NoSuchElementException => Some(GameNotFound)
     }
   override def entry(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, EntryId]] =
     gameRepository

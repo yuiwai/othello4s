@@ -2,7 +2,7 @@ package othello
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import othello.core.{ParticipantId, ParticipantName, Waiting}
+import othello.core.{Canceled, ParticipantId, ParticipantName, Waiting}
 import othello.service.GameSummary
 
 object EntranceComponent {
@@ -21,6 +21,8 @@ object EntranceComponent {
             g.gameState match {
               case Waiting =>
                 s"${g.ownerName.value} 【参加受付中】"
+              case Canceled =>
+                s"${g.ownerName} 【キャンセ済み】"
               case _ =>
                 s"${g.ownerName.value} x ${g.challengerName.getOrElse(ParticipantName.noName).value} 【対戦中】"
             },

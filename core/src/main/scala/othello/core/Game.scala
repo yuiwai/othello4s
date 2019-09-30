@@ -36,6 +36,7 @@ final case class Game(
     (isOwner(participantId) && nextIsOwner) || (isChallenger(participantId) && !nextIsOwner)
   def isOwner(participantId: ParticipantId): Boolean = participantId == ownerId
   def isChallenger(participantId: ParticipantId): Boolean = challengerId.contains(participantId)
+  def isCanceled: Boolean = state.isInstanceOf[Canceled.type]
   def isPlaying: Boolean = state.isInstanceOf[Playing.type]
   def isTerminated: Boolean = state.isInstanceOf[Terminated]
   def mode(participantId: ParticipantId): GameMode =
@@ -55,6 +56,10 @@ final case class Game(
   def greaterColor: Option[StoneColor] = othello.greaterColor
   def winner: Option[ParticipantId] = state match {
     case Terminated(p) => p
+    case _ => None
+  }
+  def cancel: Option[Game] = state match {
+    case Waiting => Some(copy(state = Canceled))
     case _ => None
   }
   def start: Game = copy(state = Playing)
