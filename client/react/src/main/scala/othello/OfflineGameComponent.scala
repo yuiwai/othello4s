@@ -39,16 +39,23 @@ object OfflineGameComponent {
             case Left(_) => s
           }
         } else s
-      }.async >> bs.modState(s => s.copy(game = selectNextPut(s.game))).delay(500.millis)).toCallback
+      }.async >> bs.modState(s => s.copy(game = selectNextArrangement(s.game))).delay(500.millis)).toCallback
     }
-    def selectNextPut(game: Game): Game =
+    def selectNextArrangement(game: Game): Game =
       if (!game.nextIsOwner) {
         (game.challengerId match {
           case Some(challengerId) =>
             game.othello.canPutAll match {
               case xs: Set[Arrangement] if xs.nonEmpty =>
-                // FIXME 暫定でランダム
-                game.putStone(challengerId, xs.toSeq((xs.size * Math.random()).toInt).pos)
+                xs.tail.foldLeft(xs.head -> Double.MinValue) {
+                  case (acc@(current, score), arrangement) =>
+                    calcArrangementScore(game, arrangement) match {
+                      case Some(newScore) if newScore > score => arrangement -> newScore
+                      case _ => acc
+                    }
+                } match {
+                  case (a, _) => game.putStone(challengerId, a.pos)
+                }
               case _ => game.pass(challengerId)
             }
           case None => Right(game)
@@ -57,6 +64,15 @@ object OfflineGameComponent {
           case Left(_) => game
         }
       } else game
+    def calcArrangementScore(game: Game, arrangement: Arrangement): Option[Double] =
+      game.othello
+        .put(arrangement.pos, arrangement.color)
+        .map(_.score(arrangement.color).toDouble + (arrangement.pos match {
+          case Pos(1, 1) | Pos(8, 8) | Pos(1, 8) | Pos(8, 1) => 20
+          case Pos(1, _) | Pos(_, 1) | Pos(8, _) | Pos(_, 8) => 10
+          case _ => 0
+        }))
+        .toOption
   }
 
   final case class Props(handler: Action => Callback) {
