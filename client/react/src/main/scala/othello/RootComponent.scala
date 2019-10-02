@@ -89,7 +89,10 @@ object RootComponent {
                 act(LoadGames(participantId)).asAsyncCallback
             }.toCallback)
       }
-      case CancelGame(gameId: GameId, participantId: ParticipantId) => bs.withService { service =>
+      case StartGame(gameId, participantId) => bs.withService { service =>
+        AsyncCallback.fromFuture(service.start(gameId, participantId)).toCallback
+      }
+      case CancelGame(gameId, participantId) => bs.withService { service =>
         (AsyncCallback
           .fromFuture(service.cancel(gameId, participantId)) >>
           act(LoadGames(participantId)).async).toCallback
@@ -141,8 +144,21 @@ object RootComponent {
           case Terminated(_, _) =>
             // FIXME versionのチェックができるか？(TerminatedされたGameはすでに削除されている可能性がある)
             bs.withProps(p => Callback(p.eventSourceConnection.close))
-          case GameStarted(_, _) =>
-            bs.modState(_.modGame(_.start))
+          case GamePrepared(gameId, challengerId) =>
+            bs.withGame {
+              _.flatMap(_.entry(challengerId).toOption)
+                .fold(Callback.empty)(bs.putGame)
+            }
+          case GameStarted(_) =>
+            bs.withGame {
+              _.flatMap(_.start.toOption)
+                .fold(Callback.empty)(bs.putGame)
+            }
+          case GameCanceled(gameId) =>
+            bs.withGame {
+              _.flatMap(_.cancel)
+                .fold(Callback.empty)(bs.putGame)
+            }
         }
       case GiveUp(gameId, participantId) => bs.withService { service =>
         (for {

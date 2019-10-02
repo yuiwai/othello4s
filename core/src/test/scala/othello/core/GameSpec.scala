@@ -10,15 +10,16 @@ object GameSpec extends TestSuite {
     val invalidPos = Pos(1, 1)
     val waitingGame = Game(ownerId)
     val notStartedGame = waitingGame.entry(challengerId).right.get
-    val startedGame = notStartedGame.start
+    val startedGame = notStartedGame.start.right.get
     test("entry") {
       test("valid") {
-        waitingGame.entry(challengerId).right.get.state ==> Prepared
+        val g = waitingGame.entry(challengerId).right.get
+        g.state ==> Prepared
+        g.version ==> waitingGame.version.increment
       }
       test("same as ownerId") {
         waitingGame.entry(ownerId) ==> Left(SameAsOwnerId)
       }
-      // FIXME なぜエントリできないのかを表現できた方がいい
       test("not waiting") {
         notStartedGame.entry(challengerId) ==> Left(NotWaiting)
         startedGame.entry(challengerId) ==> Left(NotWaiting)
@@ -26,7 +27,9 @@ object GameSpec extends TestSuite {
     }
     test("cancel") {
       test("valid") {
-        waitingGame.cancel.get.state ==> Canceled
+        val g = waitingGame.cancel.get
+        g.state ==> Canceled
+        g.version ==> waitingGame.version.increment
       }
       test("not waiting") {
         startedGame.cancel ==> None
@@ -34,10 +37,12 @@ object GameSpec extends TestSuite {
     }
     test("start") {
       test("valid") {
-        // TODO
+        val g = notStartedGame.start.right.get
+        g.state ==> Playing
+        g.version ==> notStartedGame.version.increment
       }
       test("not prepared") {
-        // TODO
+        waitingGame.start ==> Left(NotPrepared)
       }
     }
     test("participantIdFromColor") {
@@ -51,7 +56,7 @@ object GameSpec extends TestSuite {
     }
     test("put stone") {
       test("valid") {
-        startedGame.putStone(ownerId, validPos).right.get.version ==> GameVersion(2)
+        startedGame.putStone(ownerId, validPos).right.get.version ==> startedGame.version.increment
       }
       test("waiting") {
         waitingGame.putStone(ownerId, validPos) ==> Left(NotPlaying)
@@ -78,10 +83,10 @@ object GameSpec extends TestSuite {
         terminatedGame.winner ==> Some(ownerId)
       }
       test("can accept version") {
-        startedGame.canAcceptVersion(GameVersion(2)) ==> true
-        startedGame.canAcceptVersion(GameVersion(3)) ==> false
-        waitingGame.canAcceptVersion(GameVersion(2)) ==> false
-        notStartedGame.canAcceptVersion(GameVersion(2)) ==> false
+        startedGame.canAcceptVersion(startedGame.version.increment) ==> true
+        startedGame.canAcceptVersion(startedGame.version) ==> false
+        startedGame.canAcceptVersion(startedGame.version.increment.increment) ==> false
+        waitingGame.canAcceptVersion(notStartedGame.version) ==> false
       }
       test("timeout") {
         startedGame.timeout.state ==> Terminated(Some(challengerId))

@@ -38,6 +38,9 @@ class OnlineService extends Service[Future] with codec.Codec {
   override def entry(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, EntryId]] =
     post[WithServiceError[EntryId]]("/games/entry", EntryRequest(gameId, participantId).asJson)
       .map(_.fold(_ => Left(DecodeError), identity))
+  override def start(gameId: GameId, ownerId: ParticipantId): Future[Either[ServiceError, Game]] =
+    post[WithServiceError[Game]]("/games/start", StartRequest(gameId, ownerId).asJson)
+      .map(_.fold(_ => Left(DecodeError), identity))
   override def putStone(gameId: GameId, participantId: ParticipantId, pos: Pos): Future[Either[ServiceError, Game]] =
     post[WithServiceError[Game]]("/games/putStone", PutStoneRequest(gameId, participantId, pos).asJson)
       .map(_.fold(_ => Left(DecodeError), identity))
@@ -64,6 +67,7 @@ class OfflineService extends Service[Future] {
   override def createGame(participantId: ParticipantId): Future[Either[ServiceError, GameSummary]] = ???
   override def cancel(gameId: GameId, participantId: ParticipantId): Future[Option[ServiceError]] = ???
   override def entry(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, EntryId]] = ???
+  override def start(gameId: GameId, ownerId: ParticipantId): Future[Either[ServiceError, Game]] = ???
   override def putStone(gameId: GameId, participantId: ParticipantId, pos: Pos): Future[Either[ServiceError, Game]] = ???
   override def pass(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, Game]] = ???
   override def giveUp(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, Game]] = ???

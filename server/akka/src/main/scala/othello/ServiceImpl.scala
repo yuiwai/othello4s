@@ -54,9 +54,22 @@ class ServiceImpl(gameRepository: GameRepository[Future], participantRepository:
         case Some(g) => g.entry(participantId) match {
           case Right(game) =>
             gameRepository
-              .store(gameId, game.start)
-              .map(_ => Right(EntryId(1000)))
+              .store(gameId, game)
+              .map(_ => Right(EntryId(1000))) // FIXME EntryIdを使っていないので消したい
           case Left(_) => Future.successful(Left(GameStarted)) // TODO エラーを細かく分類したい
+        }
+        case None => Future.successful(Left(GameNotFound))
+      }
+  override def start(gameId: GameId, ownerId: ParticipantId): Future[Either[ServiceError, Game]] =
+    gameRepository
+      .find(gameId)
+      .flatMap {
+        case Some(g) => g.start match {
+          case Right(game) =>
+            gameRepository
+              .store(gameId, game)
+              .map(_ => Right(game))
+          case Left(_) => Future.successful(Left(GameStarted))
         }
         case None => Future.successful(Left(GameNotFound))
       }

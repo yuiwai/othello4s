@@ -46,7 +46,7 @@ final case class Game(
   def entry(newChallengerId: ParticipantId): Either[GameError, Game] = // FIXME state == Waitingも見た方がいい
     challengerId.fold[Either[GameError, Game]] {
       if (ownerId == newChallengerId) Left(SameAsOwnerId)
-      else Right(copy(challengerId = Some(newChallengerId), state = Prepared))
+      else Right(copy(challengerId = Some(newChallengerId), state = Prepared, version = version.increment))
     }(_ => Left(NotWaiting))
   def participantIdFromColor(color: StoneColor): Option[ParticipantId] =
     (othello.turn == color, nextIsOwner) match {
@@ -59,10 +59,13 @@ final case class Game(
     case _ => None
   }
   def cancel: Option[Game] = state match {
-    case Waiting => Some(copy(state = Canceled))
+    case Waiting => Some(copy(state = Canceled, version = version.increment))
     case _ => None
   }
-  def start: Game = copy(state = Playing)
+  def start: Either[GameError, Game] = state match {
+    case Prepared => Right(copy(state = Playing, version = version.increment))
+    case _ => Left(NotPrepared)
+  }
   // TODO version更新など、共通系の処理が漏れるので、状態更新処理フローを共通化したい
   def giveUp: Game = copy(state = Terminated(if (nextIsOwner) challengerId else Some(ownerId)), version = version.increment)
   def timeout: Game = copy(state = Terminated(if (nextIsOwner) challengerId else Some(ownerId)), version = version.increment)

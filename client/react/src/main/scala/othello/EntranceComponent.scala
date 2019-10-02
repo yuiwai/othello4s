@@ -2,7 +2,7 @@ package othello
 
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
-import othello.core.{Canceled, ParticipantId, ParticipantName, Waiting}
+import othello.core._
 import othello.service.GameSummary
 
 object EntranceComponent {
@@ -26,25 +26,26 @@ object EntranceComponent {
               case _ =>
                 s"${g.ownerName.value} x ${g.challengerName.getOrElse(ParticipantName.noName).value} 【対戦中】"
             },
-            if (g.isPlaying) {
-              if (g.isParticipating(p.participantId)) {
+            g.gameState match {
+              case Playing =>
+                if (g.isParticipating(p.participantId)) {
+                  <.button(
+                    "再開する"
+                  )
+                } else {
+                  <.button(
+                    ^.onClick --> p.handler(LoadGame(g.gameId, p.participantId)),
+                    "観戦する"
+                  )
+                }
+              case _ =>
                 <.button(
-                  "再開する"
+                  ^.onClick --> {
+                    p.handler(EntryGame(g.gameId, p.participantId))
+                  },
+                  if (g.ownerId == p.participantId) ^.display.none else TagMod.empty,
+                  "参加する"
                 )
-              } else {
-                <.button(
-                  ^.onClick --> p.handler(LoadGame(g.gameId, p.participantId)),
-                  "観戦する"
-                )
-              }
-            } else {
-              <.button(
-                ^.onClick --> {
-                  p.handler(EntryGame(g.gameId, p.participantId))
-                },
-                if (g.ownerId == p.participantId) ^.display.none else TagMod.empty,
-                "参加する"
-              )
             }
           )
         }.toTagMod,

@@ -105,6 +105,7 @@ object OfflineGameComponent {
               GameInformationBar.render(
                 s.game,
                 s.game.ownerId,
+                () => Callback.empty,
                 () => $.setState(s.copy(game = s.game.pass(s.game.ownerId).fold(_ => s.game, identity))),
                 () => $.setState(s.copy(game = s.game.giveUp)),
                 () => Callback.empty,

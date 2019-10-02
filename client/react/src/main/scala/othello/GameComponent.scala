@@ -40,6 +40,7 @@ object GameComponent {
         GameInformationBar.render(
           p.game,
           p.participantId,
+          () => p.handler(StartGame(p.gameId, p.participantId)),
           () => p.handler(Pass(p.gameId, p.participantId)),
           () => p.handler(GiveUp(p.gameId, p.participantId)),
           () => p.handler(CancelGame(p.gameId, p.participantId)),
@@ -122,6 +123,7 @@ object GameInformationBar {
   def render(
     game: Game,
     participantId: ParticipantId,
+    startHandler: () => Callback,
     passHandler: () => Callback,
     giveUpHandler: () => Callback,
     cancelHandler: () => Callback,
@@ -151,6 +153,16 @@ object GameInformationBar {
             ^.onClick --> cancelHandler(),
             "Cancel"
           ),
+        )
+      case Prepared =>
+        <.div(
+          "開始待ちです",
+          if (game.isOwner(participantId)) {
+            <.button(
+              ^.onClick --> startHandler(),
+              "開始する"
+            )
+          } else TagMod.empty
         )
       case Playing =>
         game.mode(participantId) match {
