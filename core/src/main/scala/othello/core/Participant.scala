@@ -9,6 +9,8 @@ object Participant {
   def apply(name: ParticipantName): Participant = apply(name, Free)
 }
 object ParticipantName {
+  val you = apply("あなた")
+  val ai: ParticipantName = apply("AI")
   val noName = apply("No Name")
 }
 

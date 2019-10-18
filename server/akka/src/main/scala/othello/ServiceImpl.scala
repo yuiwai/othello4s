@@ -9,6 +9,7 @@ import scala.concurrent.Future
 
 class ServiceImpl(gameRepository: GameRepository[Future], participantRepository: ParticipantRepository[Future])
   extends Service[Future] {
+  private val query = new GameQueryImpl(gameRepository, participantRepository)
   override def participate(name: ParticipantName): Future[ParticipantId] =
     participantRepository.store(Participant(name))
   override def allGames(participantId: ParticipantId): Future[Seq[GameSummary]] =
@@ -21,7 +22,15 @@ class ServiceImpl(gameRepository: GameRepository[Future], participantRepository:
       })
       pm <- participantRepository.findByIds(gs.flatMap(_.allParticipantIds))
     } yield p.fold(Seq.empty[GameSummary])(_ => gs.map(_.resetParticipantNames(pm)))
-  override def game(gameId: GameId): Future[Option[Game]] = gameRepository.find(gameId)
+  override def game(gameId: GameId): Future[Option[GameDetail]] =
+    for {
+      game <- gameRepository.find(gameId)
+      gs = game.map(g => GameSummary(gameId, g.state, g.ownerId, ParticipantName.noName, g.challengerId, Some(ParticipantName.noName)))
+      pm <- participantRepository.findByIds(gs.toSeq.flatMap(_.allParticipantIds))
+    } yield for {
+      g1 <- game
+      g2 <- gs.map(_.resetParticipantNames(pm))
+    } yield GameDetail(g1, g2.ownerName, g2.challengerName)
   override def createGame(participantId: ParticipantId): Future[Either[ServiceError, GameSummary]] =
     (for {
       p <- participantRepository.find(participantId)
@@ -47,7 +56,7 @@ class ServiceImpl(gameRepository: GameRepository[Future], participantRepository:
     } yield p.fold[Option[ServiceError]](Some(ParticipantNotFound))(_ => None)) recover {
       case _: NoSuchElementException => Some(GameNotFound)
     }
-  override def entry(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, EntryId]] =
+  override def entry(gameId: GameId, participantId: ParticipantId): Future[Either[ServiceError, Game]] =
     gameRepository
       .find(gameId)
       .flatMap {
@@ -55,7 +64,7 @@ class ServiceImpl(gameRepository: GameRepository[Future], participantRepository:
           case Right(game) =>
             gameRepository
               .store(gameId, game)
-              .map(_ => Right(EntryId(1000))) // FIXME EntryIdを使っていないので消したい
+              .map(_ => Right(game))
           case Left(_) => Future.successful(Left(GameStarted)) // TODO エラーを細かく分類したい
         }
         case None => Future.successful(Left(GameNotFound))
@@ -176,4 +185,11 @@ class InMemoryParticipantRepository extends ParticipantRepository[Future] {
     participants.update(participantId, participant)
     Future.successful(participantId)
   }
+}
+
+class GameQueryImpl(
+  gameRepository: GameRepository[Future],
+  participantRepository: ParticipantRepository[Future])
+  extends GameQuery[Future] {
+  override def gameDetail(gameId: GameId): Future[Option[GameDetail]] = ???
 }

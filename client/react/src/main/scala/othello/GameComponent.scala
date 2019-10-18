@@ -5,17 +5,18 @@ import japgolly.scalajs.react.vdom.html_<^._
 import org.scalajs.dom.MessageEvent
 import othello.GameComponent.GameSettings
 import othello.core._
-import othello.service.{GameEvent, GameId}
+import othello.service.{GameDetail, GameEvent, GameId}
 
 object GameComponent {
   final case class Props(
     participantId: ParticipantId,
     gameId: GameId,
-    game: core.Game,
+    gameDetail: GameDetail,
     settings: GameSettings,
     eventSourceConnection: EventSourceConnection,
     handler: GameAction => Callback) {
     @inline def render: VdomElement = Component(this)
+    def game = gameDetail.game
   }
 
   final case class GameSettings(
@@ -38,7 +39,7 @@ object GameComponent {
     def render(p: Props): VdomElement = {
       <.div(
         GameInformationBar.render(
-          p.game,
+          p.gameDetail,
           p.participantId,
           () => p.handler(StartGame(p.gameId, p.participantId)),
           () => p.handler(Pass(p.gameId, p.participantId)),
@@ -121,13 +122,14 @@ object SettingsView {
 
 object GameInformationBar {
   def render(
-    game: Game,
+    gameDetail: GameDetail,
     participantId: ParticipantId,
     startHandler: () => Callback,
     passHandler: () => Callback,
     giveUpHandler: () => Callback,
     cancelHandler: () => Callback,
-    exitView: => VdomNode): TagMod =
+    exitView: => VdomNode): TagMod = {
+    import gameDetail.game
     game.state match {
       case Terminated(winner) =>
         game.mode(participantId) match {
@@ -171,16 +173,35 @@ object GameInformationBar {
             exitView
           )
           case PlayerMode =>
-            PlayingMenuBar.render(
-              game,
-              participantId,
-              passHandler,
-              giveUpHandler,
-              exitView
+            <.div(
+              EntryInformationView.render(gameDetail.firstEntry, gameDetail.secondEntry),
+              PlayingMenuBar.render(
+                game,
+                participantId,
+                passHandler,
+                giveUpHandler,
+                exitView
+              )
             )
         }
       case _ => TagMod.empty
     }
+  }
+}
+
+object EntryInformationView {
+  def render(first: GameEntry, second: Option[GameEntry]): VdomNode = {
+    <.div(
+      renderStone(first.color),
+      s" ${first.name.value} - ${second.map(_.name).getOrElse(ParticipantName.noName).value} ",
+      renderStone(first.color.reverse)
+    )
+  }
+  private def renderStone(color: StoneColor): VdomElement =
+    <.span(
+      ^.color := color.toString,
+      "●"
+    )
 }
 
 object PlayingMenuBar {

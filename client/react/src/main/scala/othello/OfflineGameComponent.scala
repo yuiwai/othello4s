@@ -3,6 +3,7 @@ package othello
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import othello.core.{Arrangement, Game, Pos}
+import othello.service.GameDetail
 
 import scala.concurrent.duration._
 
@@ -17,11 +18,10 @@ object OfflineGameComponent {
   case class SinglePlayMode(bs: BackendScope[Props, State]) extends OfflineGameMode {
     override val boardClickHandle: Pos => Callback = { pos =>
       bs.modState { s =>
-        import s.game
-        game.currentTurn match {
+        s.game.currentTurn match {
           case Some(participantId) =>
-            game.putStone(participantId, pos) match {
-              case Right(g) => s.copy(game = g)
+            s.game.putStone(participantId, pos) match {
+              case Right(g) => s.putGame(g)
               case Left(_) => s
             }
           case None => s
@@ -35,11 +35,11 @@ object OfflineGameComponent {
         import s.game
         if (game.nextIsOwner) {
           game.putStone(game.ownerId, pos) match {
-            case Right(g) => s.copy(game = g)
+            case Right(g) => s.putGame(g)
             case Left(_) => s
           }
         } else s
-      }.async >> bs.modState(s => s.copy(game = selectNextArrangement(s.game))).delay(500.millis)).toCallback
+      }.async >> bs.modState(s => s.putGame(selectNextArrangement(s.game))).delay(500.millis)).toCallback
     }
     def selectNextArrangement(game: Game): Game =
       if (!game.nextIsOwner) {
@@ -78,7 +78,10 @@ object OfflineGameComponent {
   final case class Props(handler: Action => Callback) {
     @inline def render: VdomElement = Component(this)
   }
-  final case class State(game: Game, mode: OfflineGameMode)
+  final case class State(gameDetail: GameDetail, mode: OfflineGameMode) {
+    def game: Game = gameDetail.game
+    def putGame(game: Game): State = copy(gameDetail = gameDetail.copy(game = game))
+  }
 
   final class Backend($: BackendScope[Props, State]) {
     def render(p: Props, s: State): VdomElement =
@@ -103,14 +106,14 @@ object OfflineGameComponent {
             <.div(
               "AIと対戦中...",
               GameInformationBar.render(
-                s.game,
+                s.gameDetail,
                 s.game.ownerId,
                 () => Callback.empty,
-                () => $.setState(s.copy(game = s.game.pass(s.game.ownerId).fold(_ => s.game, identity))),
-                () => $.setState(s.copy(game = s.game.giveUp)),
+                () => $.setState(s.putGame(s.game.pass(s.game.ownerId).fold(_ => s.game, identity))),
+                () => $.setState(s.putGame(s.game.giveUp)),
                 () => Callback.empty,
                 <.button(
-                  ^.onClick --> $.setState(s.copy(game = Game.singlePlay)),
+                  ^.onClick --> $.setState(s.putGame(Game.singlePlay)),
                   "再戦する"
                 )
               )
@@ -128,7 +131,7 @@ object OfflineGameComponent {
   }
 
   val Component = ScalaComponent.builder[Props]("OfflineGameComponent")
-    .initialState(State(Game.singlePlay, Preparing))
+    .initialState(State(GameDetail.singlePlay, Preparing))
     .renderBackend[Backend]
     .build
 }

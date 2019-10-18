@@ -1,5 +1,7 @@
 package othello.core
 
+import scala.collection.GenTraversableOnce
+
 final case class Game(
   othello: Othello,
   state: GameState,
@@ -7,6 +9,7 @@ final case class Game(
   challengerId: Option[ParticipantId],
   nextIsOwner: Boolean,
   version: GameVersion) {
+  def allParticipantIds: Seq[ParticipantId] = ownerId :: challengerId.toList
   def putStone(actorId: ParticipantId, pos: Pos): Either[GameError, Game] =
     (state, isTurnOf(actorId)) match {
       case (Playing, true) =>
@@ -84,6 +87,8 @@ final case class GameVersion(value: Int) extends AnyVal {
 object GameVersion {
   def first: GameVersion = apply(1)
 }
+
+final case class GameEntry(participantId: ParticipantId, name: ParticipantName, color: StoneColor)
 
 sealed trait GameMode
 case object PlayerMode extends GameMode
