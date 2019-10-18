@@ -3,7 +3,7 @@ package othello
 import japgolly.scalajs.react._
 import japgolly.scalajs.react.vdom.html_<^._
 import othello.GameComponent.GameSettings
-import othello.core.{Game, ParticipantId}
+import othello.core.{Game, Prepared}
 import othello.service._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -30,8 +30,7 @@ object RootComponent {
     def modAppState(f: AppState => AppState): State = modRoot(root => root.copy(appState = f(root.appState)))
     def modGlobalState(f: GlobalState => GlobalState): State = modRoot(root => root.copy(globalState = f(root.globalState)))
     def modGame(f: Game => Game): State = modAppState {
-      case PlayingGame(participantId, gameId, game, eventSourceConnection) =>
-        PlayingGame(participantId, gameId, f(game), eventSourceConnection)
+      case gas: GameAppState => gas.putGame(f(gas.game))
       case _ => this.rootModel.appState
     }
     def modGameSettings(f: GameSettings => GameSettings): State =
@@ -59,12 +58,12 @@ object RootComponent {
           bs.withProps { props =>
             AsyncCallback.fromFuture(service.game(gameId))
               .flatMap {
-                case Some(game) =>
+                case Some(gameDetail) =>
                   bs.modState(_.modAppState(_ =>
                     PlayingGame(
                       participantId,
                       gameId,
-                      game,
+                      gameDetail,
                       props.eventSourceConnection)
                   )).asAsyncCallback
                 case _ => act(LoadGames(participantId)).asAsyncCallback
@@ -90,7 +89,8 @@ object RootComponent {
             }.toCallback)
       }
       case StartGame(gameId, participantId) => bs.withService { service =>
-        AsyncCallback.fromFuture(service.start(gameId, participantId)).toCallback
+        (AsyncCallback.fromFuture(service.start(gameId, participantId)) >>
+          act(LoadGame(gameId, participantId)).async).toCallback
       }
       case CancelGame(gameId, participantId) => bs.withService { service =>
         (AsyncCallback
@@ -115,16 +115,12 @@ object RootComponent {
           AsyncCallback.fromFuture(service.pass(gameId, participantId))
             .flatMap {
               case Right(game) =>
-                bs.modState(_.modAppState(_ =>
-                  PlayingGame(
-                    participantId,
-                    gameId,
-                    game,
-                    props.eventSourceConnection)
-                )).asAsyncCallback
+                bs.modState(_.modAppState {
+                  case p: PlayingGame => p.putGame(game)
+                  case _ => Entrance(participantId, Seq.empty) // FIXME 明示的にエラーのAppStateがあった方が良さそう
+                }).asAsyncCallback
               case _ => Callback.empty.asAsyncCallback
             }
-
             .toCallback
         }
       }
@@ -144,7 +140,7 @@ object RootComponent {
           case Terminated(_, _) =>
             // FIXME versionのチェックができるか？(TerminatedされたGameはすでに削除されている可能性がある)
             bs.withProps(p => Callback(p.eventSourceConnection.close))
-          case GamePrepared(gameId, challengerId) =>
+          case GamePrepared(_, challengerId) =>
             bs.withGame {
               _.flatMap(_.entry(challengerId).toOption)
                 .fold(Callback.empty)(bs.putGame)

@@ -12,6 +12,6 @@ object Check extends Codec {
     val game = Game(ParticipantId(10))
     println(decode[Either[ServiceError, Game]](game.asJson.toString))
 
-    println(decode[StonePut](StonePut(ParticipantId(1), Pos(1, 2), 1).asJson.noSpaces))
+    // println(decode[StonePut](StonePut(ParticipantId(1), Pos(1, 2), 1).asJson.noSpaces))
   }
 }

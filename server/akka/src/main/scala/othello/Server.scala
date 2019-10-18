@@ -10,14 +10,13 @@ import akka.stream.{ActorMaterializer, OverflowStrategy}
 import de.heikoseeberger.akkahttpcirce.FailFastCirceSupport
 import io.circe.generic.auto._
 import io.circe.syntax._
-import othello.GameCleaner.ThinkingTime
 import othello.GameEventActor.{Ping, Pong, Subscribe, UnSubscribeAll}
-import othello.core.{Game, GameVersion, ParticipantId}
+import othello.core.ParticipantId
 import othello.service._
 
 import scala.collection.mutable
+import scala.concurrent.ExecutionContextExecutor
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContextExecutor, Future}
 
 object Server extends FailFastCirceSupport with codec.Codec {
   implicit val system: ActorSystem = ActorSystem()
@@ -81,16 +80,18 @@ object Server extends FailFastCirceSupport with codec.Codec {
           post {
             entity(as[EntryRequest]) { case EntryRequest(gameId, challengerId) =>
               sendGameEvent(gameId, GamePrepared(gameId, challengerId))
-              complete(service.entry(gameId, challengerId))
+              complete {
+                service.entry(gameId, challengerId)
+              }
             }
           }
         },
         path("games" / "start") {
           post {
-            entity(as[StartRequest]){ case StartRequest(gameId, ownerId) =>
+            entity(as[StartRequest]) { case StartRequest(gameId, ownerId) =>
+              sendGameEvent(gameId, GameStarted(gameId))
               complete {
                 service.start(gameId, ownerId)
-                sendGameEvent(gameId, GameStarted(gameId))
               }
             }
           }

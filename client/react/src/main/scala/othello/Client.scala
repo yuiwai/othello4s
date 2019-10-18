@@ -5,7 +5,7 @@ import org.scalajs.dom.raw.{EventSource, MessageEvent}
 import othello.GameComponent.GameSettings
 import othello.RootComponent.{NetworkMode, Offline, Online}
 import othello.core._
-import othello.service.{GameEvent, GameId, GameSummary, Service}
+import othello.service.{GameDetail, GameEvent, GameId, GameSummary, Service}
 
 import scala.concurrent.Future
 
@@ -69,10 +69,11 @@ sealed trait GameAppState extends AuthenticatedAppState {
 final case class PlayingGame(
   participantId: ParticipantId,
   gameId: GameId,
-  game: Game,
+  gameDetail: GameDetail,
   eventSourceConnection: EventSourceConnection
 ) extends GameAppState {
-  override def putGame(game: Game): GameAppState = copy(game = game)
+  val game: Game = gameDetail.game
+  override def putGame(game: Game): GameAppState = copy(gameDetail = gameDetail.copy(game = game))
 }
 final case class Edit(
   participantId: ParticipantId

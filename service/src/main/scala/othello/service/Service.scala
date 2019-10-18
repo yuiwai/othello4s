@@ -7,10 +7,10 @@ import scala.language.higherKinds
 trait Service[F[_]] {
   def participate(name: ParticipantName): F[ParticipantId]
   def allGames(participantId: ParticipantId): F[Seq[GameSummary]]
-  def game(gameId: GameId): F[Option[Game]]
+  def game(gameId: GameId): F[Option[GameDetail]]
   def createGame(participantId: ParticipantId): F[Either[ServiceError, GameSummary]]
   def cancel(gameId: GameId, participantId: ParticipantId): F[Option[ServiceError]]
-  def entry(gameId: GameId, participantId: ParticipantId): F[Either[ServiceError, EntryId]]
+  def entry(gameId: GameId, participantId: ParticipantId): F[Either[ServiceError, Game]]
   def start(gameId: GameId, ownerId: ParticipantId): F[Either[ServiceError, Game]]
   def putStone(gameId: GameId, participantId: ParticipantId, pos: Pos): F[Either[ServiceError, Game]]
   def pass(gameId: GameId, participantId: ParticipantId): F[Either[ServiceError, Game]]
@@ -38,6 +38,9 @@ final case class GameSummary(
   challengerId: Option[ParticipantId],
   challengerName: Option[ParticipantName]
 ) {
+  def firstEntry: GameEntry = GameEntry(ownerId, ownerName, Black)
+  def secondEntry: Option[GameEntry] =
+    challengerId.map(id => GameEntry(id, challengerName.getOrElse(ParticipantName.noName), White))
   def allParticipantIds: List[ParticipantId] = (Some(ownerId) :: challengerId :: Nil).flatten
   def isPlaying: Boolean = gameState == Playing
   def isParticipating(participantId: ParticipantId): Boolean =
@@ -49,12 +52,21 @@ final case class GameSummary(
     )
   }
 }
+object GameSummary {
+  def singlePlay: GameSummary = GameSummary(
+    GameId(0),
+    Playing,
+    ParticipantId(-1), ParticipantName("あなた"),
+    Some(ParticipantId(-2)), Some(ParticipantName("AI"))
+  )
+}
 
 sealed trait ServiceError
 case object DecodeError extends ServiceError
 case object ParticipantNotFound extends ServiceError
 case object GameNotFound extends ServiceError
 case object OwnedGameExists extends ServiceError
+case object EntryFailed extends ServiceError
 case object GameStarted extends ServiceError
 case object PutError extends ServiceError
 case object PassError extends ServiceError
@@ -77,13 +89,6 @@ trait ParticipantRepository[F[_]] {
   def store(participant: Participant): F[ParticipantId]
 }
 
-// FIXME 不要なので削除
-final case class EntryId(value: Int) extends AnyVal
-trait Entry {
-  val gameId: GameId
-  val entryId: EntryId
-}
-
 final case class ParticipateRequest(name: ParticipantName)
 final case class CancelGameRequest(gameId: GameId, participantId: ParticipantId)
 final case class EntryRequest(gameId: GameId, challengerId: ParticipantId)
@@ -104,3 +109,16 @@ final case class Terminated(gameId: GameId, version: GameVersion) extends GameEv
 final case class GamePrepared(gameId: GameId, challengerId: ParticipantId) extends GameEvent
 final case class GameStarted(gameId: GameId) extends GameEvent
 final case class GameCanceled(gameId: GameId) extends GameEvent
+
+trait GameQuery[F[_]] {
+  def gameDetail(gameId: GameId): F[Option[GameDetail]]
+}
+
+final case class GameDetail(game: Game, ownerName: ParticipantName, challengerName: Option[ParticipantName]) {
+  def firstEntry: GameEntry = GameEntry(game.ownerId, ownerName, Black)
+  def secondEntry: Option[GameEntry] =
+    game.challengerId.map(id => GameEntry(id, challengerName.getOrElse(ParticipantName.noName), White))
+}
+object GameDetail {
+  def singlePlay: GameDetail = GameDetail(Game.singlePlay, ParticipantName.you, Some(ParticipantName.ai))
+}
