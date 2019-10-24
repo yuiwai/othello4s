@@ -79,6 +79,7 @@ lazy val akkaServer =
       libraryDependencies ++= Seq(
         "com.typesafe.akka" %% "akka-http" % "10.1.9",
         "com.typesafe.akka" %% "akka-stream" % "2.5.23",
+        "com.typesafe.akka" %% "akka-actor-typed" % "2.5.23",
         "de.heikoseeberger" %% "akka-http-circe" % "1.27.0",
       ),
       scalaJSProjects := Seq(reactClient),
